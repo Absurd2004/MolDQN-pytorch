@@ -8,6 +8,8 @@ import time
 import warnings
 import random
 from collections import deque
+from tqdm import tqdm
+import wandb
 
 from rdkit.Chem import Draw
 import numpy as np
@@ -17,15 +19,15 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import Descriptors
 from rdkit.Chem import QED
 
-from mol_dqn.chemgraph.dqn import deep_q_networks
-from mol_dqn.chemgraph.dqn import molecules as molecules_mdp
+
+from mol_dqn.chemgraph.dqn import environment as molecules_mdp
 from mol_dqn.chemgraph.dqn.py import molecules
 from mol_dqn.utils.schedular import PiecewiseSchedule, LinearSchedule
 from mol_dqn.utils.buffer import ReplayBuffer, PrioritizedReplayBuffer
 from mol_dqn.utils.utils import get_fingerprint
 
 
-def run_training(hparams, environment, dqn, model_dir):
+def run_training(hparams, environment, dqn, model_dir,use_wandb=False):
 
     """Runs the training procedure.
   
@@ -61,7 +63,12 @@ def run_training(hparams, environment, dqn, model_dir):
 
     global_step = 0
 
-    for episode in range(hparams.num_episodes):
+    #print(f"sampling之前跑通")
+
+    #assert False,"检查点"
+
+    for episode in tqdm(range(hparams.num_episodes), desc="Episodes"):
+        #print(f"Episode {episode + 1}/{hparams.num_episodes}")
         global_step = _episode(
             environment=environment,
             dqn=dqn,
@@ -72,12 +79,21 @@ def run_training(hparams, environment, dqn, model_dir):
             summary_writer=summary_writer,
             exploration=exploration,
             beta_schedule=beta_schedule,
-            model_dir=model_dir)
+            model_dir=model_dir,
+            save_video = False,
+            use_wandb=use_wandb)
         
         if (episode + 1) % hparams.update_frequency == 0:
             dqn.update_target_network() 
+
+            if use_wandb:
+                wandb.log({
+                    "target_network_updates": episode + 1,
+                    "episode": episode
+               })
         
         if (episode + 1) % hparams.save_frequency == 0:
+            """
             checkpoint = {
                 'episode': episode + 1,
                 'model_state_dict': dqn.state_dict(),
@@ -86,12 +102,15 @@ def run_training(hparams, environment, dqn, model_dir):
             checkpoint_path = os.path.join(model_dir, f'ckpt_episode_{episode+1}.pt')
             torch.save(checkpoint, checkpoint_path)
             logging.info(f'Model saved to {checkpoint_path}')
+            """
+            checkpoint_path = os.path.join(model_dir, f'ckpt_episode_{episode+1}.pt')
+            dqn.save_checkpoint(checkpoint_path)
     
     # 关闭 summary writer
     summary_writer.close()
 
 def _episode(environment, dqn, memory, episode, global_step, hparams,
-             summary_writer, exploration, beta_schedule, model_dir,save_video = False):
+             summary_writer, exploration, beta_schedule, model_dir,save_video = False,use_wandb=False):
     """Runs a single episode.
 
     Args:
@@ -147,15 +166,30 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
             head=head,
             model_dir=model_dir,
             save_video = save_video)
+
+        #print("跑通了_step")
+        #print(f"Episode {episode}, Step {step}: {result.state}, Reward: {result.reward:.4f}")
+        
+        #assert False,"检查点"
     
         if step == hparams.max_steps_per_episode - 1:
             reward_value = result.reward if isinstance(result.reward, (int, float)) else float(result.reward)
             summary_writer.add_scalar('episode/reward', reward_value, global_step)
             summary_writer.add_text('episode/smiles', str(result.state), global_step)
 
+            if use_wandb:
+                wandb.log({
+                    "episode/reward": reward_value,
+                    "episode/smiles": str(result.state),
+                    "episode/steps": step + 1,
+                    "episode": episode,
+                    "global_step": global_step
+                })
+
 
             logging.info('Episode %d/%d took %gs', episode + 1, hparams.num_episodes,
                         time.time() - episode_start_time)
+            #print(f"Episode {episode + 1}/{hparams.num_episodes} took {time.time() - episode_start_time:.2f} seconds")
             logging.info('SMILES: %s\n', result.state)
             logging.info('The reward is: %s', str(result.reward))
 
@@ -164,6 +198,8 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
         
         if (episode > min(50, hparams.num_episodes / 10)) and (
             global_step % hparams.learning_frequency == 0):
+            #print(f"Episode {episode}, Step {step}: 收集到足够的经验，开始训练 DQN")
+            #print(f"hparams.learning_frequency: {hparams.learning_frequency}, global_step: {global_step},hparams.num_episodes: {hparams.num_episodes}")
 
 
             if len(memory) < hparams.batch_size:
@@ -186,21 +222,40 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
 
             state_t_tensor = torch.FloatTensor(state_t).to(device)
             reward_t_tensor = torch.FloatTensor(reward_t).to(device)
-            state_tp1_tensor = torch.FloatTensor(state_tp1).to(device)
+            #state_tp1_tensor = torch.FloatTensor(state_tp1).to(device)
             done_tensor = torch.FloatTensor(np.expand_dims(done_mask, axis=1)).to(device)
             weight_tensor = torch.FloatTensor(np.expand_dims(weight, axis=1)).to(device)
+
+
+            #print(f"训练前跑通,检查数据")
+            #assert False,"检查点"
 
 
             loss, td_error = dqn.train(
                 states=state_t_tensor,
                 rewards=reward_t_tensor,
-                next_states=state_tp1_tensor,
+                next_states=state_tp1,
                 done=done_tensor,
                 weight=weight_tensor)
+
+            if use_wandb:
+                wandb.log({
+                    "training/loss": loss,
+                    "training/td_error_mean": td_error.mean().item(),
+                    "training/learning_rate": dqn.optimizer.param_groups[0]['lr'],
+                    "training/epsilon": dqn.epsilon,
+                    "episode": episode,
+                    "global_step": global_step
+                })
             
 
             summary_writer.add_scalar('training/loss', loss, global_step)
             logging.info('Current Loss: %.4f', loss)
+
+            #print(f"Episode {episode}, Step {step}: Loss: {loss:.4f}, TD Error: {td_error.mean().item():.4f}")
+            #print(f"完成一次更新")
+
+            #assert False,"检查点"
 
 
             if hparams.prioritized and indices is not None:

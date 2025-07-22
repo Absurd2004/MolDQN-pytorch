@@ -129,31 +129,45 @@ class DoubleDQNAgent(nn.Module):
             current_q_values = current_q_values.squeeze(-1).unsqueeze(-1)
         
         with torch.no_grad():
-            if self.double_q:
-                next_q_main = self.main_network(next_states)
-
-                next_actions = torch.argmax(next_q_main, dim=-1 if not self.num_bootstrap_heads else -2)
-
-                next_q_target = self.target_network(next_states)
-
-                if self.num_bootstrap_heads:
-                    # 处理 bootstrap heads
-                    batch_size = next_q_target.shape[0]
-                    head_idx = torch.randint(0, self.num_bootstrap_heads, (batch_size,), device=self.device)
-                    next_q_values = next_q_target[torch.arange(batch_size), next_actions, head_idx].unsqueeze(-1)
-                
-                else:
-                    next_q_values = next_q_target.gather(1, next_actions.unsqueeze(-1))
-
-            else:
-                # 标准 DQN
-                next_q_target = self.target_network(next_states)
-                if self.num_bootstrap_heads:
-                    next_q_values = torch.max(next_q_target, dim=-1)[0].max(dim=-1, keepdim=True)[0]
-                else:
-                    next_q_values = torch.max(next_q_target, dim=-1, keepdim=True)[0]
+            batch_max_q_values = []
             
+            for i in range(states.shape[0]):
+                # next_states[i] 是一个 numpy 数组 [num_actions, fingerprint_length+1]
+                next_state_tensor = torch.FloatTensor(next_states[i]).to(self.device)
+                
+                if self.double_q:
+                    # Double DQN
+                    q_main = self.main_network(next_state_tensor)
+                    if self.num_bootstrap_heads:
+                        # Bootstrap: 对所有头求平均来选择动作
+                        q_mean = q_main.mean(dim=1)
+                        best_action = torch.argmax(q_mean)
+                    else:
+                        # 标准 DQN
+                        best_action = torch.argmax(q_main.squeeze())
+                    
+                    # 用目标网络评估选择的动作
+                    q_target = self.target_network(next_state_tensor)
+                    if self.num_bootstrap_heads:
+                        max_q = q_target[best_action].mean()
+                    else:
+                        max_q = q_target[best_action].squeeze()
+                else:
+                    # 标准 DQN: 直接取最大值
+                    q_target = self.target_network(next_state_tensor)
+                    if self.num_bootstrap_heads:
+                        # Bootstrap: 先对每个动作的所有头求平均，再取最大
+                        max_q = q_target.mean(dim=1).max()
+                    else:
+                        # 标准 DQN: 直接取最大
+                        max_q = q_target.squeeze().max()
+                
+                batch_max_q_values.append(max_q)
+            
+            next_q_values = torch.stack(batch_max_q_values).unsqueeze(-1)
             target_q_values = rewards + (self.gamma * next_q_values * (1 - done))
+        
+        #print(f"当前 Q 值形状: {current_q_values.shape}, 目标 Q 值形状: {target_q_values.shape}")
 
         
         td_error = current_q_values - target_q_values
@@ -164,6 +178,8 @@ class DoubleDQNAgent(nn.Module):
             0.5 * td_error.pow(2),
             torch.abs(td_error) - 0.5
         )
+        #print(f"weight: {weight.shape}, huber_loss: {huber_loss.shape}")
+        #print(f"weight{[weight[:10]]}")
 
         weighted_loss = (weight * huber_loss).mean()
 

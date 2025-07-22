@@ -4,9 +4,11 @@ import argparse
 from rdkit import Chem
 
 from rdkit.Chem import QED
+import json
+import logging
+import wandb
 
 
-from mol_dqn.chemgraph.dqn import deep_q_networks
 from mol_dqn.chemgraph.dqn import environment as molecules_mdp
 from mol_dqn.chemgraph.dqn import run_dqn
 from mol_dqn.chemgraph.dqn.params import core
@@ -53,17 +55,37 @@ def main():
                      help='Starting molecule SMILES string')
     parser.add_argument('--model_dir', type=str, required=True,
                      help='Directory to save model and logs')
+
+    parser.add_argument('--wandb_project', type=str, default='mol-dqn',
+                     help='Weights & Biases project name')
+    parser.add_argument('--wandb_run_name', type=str, default=None,
+                     help='Weights & Biases run name')
+    parser.add_argument('--use_wandb', type=bool, default=False,
+                     help='Disable Weights & Biases logging')
     
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+    if args.use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            name=args.wandb_run_name,
+            config=vars(args)
+        )
 
 
 
     if args.hparams is not None:
         with open(args.hparams, 'r') as f:
-            hparams = deep_q_networks.get_hparams(**json.load(f))
-    
+            hparams = get_hparams(**json.load(f))
     else:
-        hparams = deep_q_networks.get_hparams()
+        hparams = get_hparams()
+    
+
+    if args.use_wandb:
+        wandb.config.update(hparams.__dict__)
     
 
     environment = QEDRewardMolecule(
@@ -78,16 +100,21 @@ def main():
 
     dqn = DoubleDQNAgent(
         input_dim=hparams.fingerprint_length + 1,
-        hparams=hparams)
+        hparams=hparams,
+        )
 
-    print(f"初始化成功")
-    assert False, "检查点"
+    #print(f"初始化成功")
+    #assert False, "检查点"
     
     run_dqn.run_training(
       hparams=hparams,
       environment=environment,
       dqn=dqn,
-      model_dir=args.model_dir)
+      model_dir=args.model_dir,
+      use_wandb=args.use_wandb)
+
+    if args.use_wandb:
+        wandb.finish()
     
     core.write_hparams(hparams, os.path.join(args.model_dir, 'config.json'))
 
