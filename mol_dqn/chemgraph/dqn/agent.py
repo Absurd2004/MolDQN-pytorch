@@ -111,7 +111,7 @@ class DoubleDQNAgent(nn.Module):
         self.main_network.train()
         return action
 
-    def train(self, states, rewards, next_states, done, weight):
+    def train_step(self, states, rewards, next_states, done, weight):
         """训练网络"""
         self.main_network.train()
         self.training_steps += 1

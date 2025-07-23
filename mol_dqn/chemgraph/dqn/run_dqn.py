@@ -27,6 +27,10 @@ from mol_dqn.utils.buffer import ReplayBuffer, PrioritizedReplayBuffer
 from mol_dqn.utils.utils import get_fingerprint
 
 
+import io
+from PIL import Image, ImageDraw, ImageFont
+
+
 def run_training(hparams, environment, dqn, model_dir,use_wandb=False):
 
     """Runs the training procedure.
@@ -231,7 +235,7 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
             #assert False,"检查点"
 
 
-            loss, td_error = dqn.train(
+            loss, td_error = dqn.train_step(
                 states=state_t_tensor,
                 rewards=reward_t_tensor,
                 next_states=state_tp1,
@@ -387,3 +391,198 @@ def _create_video_from_images(episode, model_dir):
         print("imageio not installed. Install with: pip install imageio[ffmpeg]")
     except Exception as e:
         print(f"Error creating video: {e}")
+
+
+def draw_molecule_with_qed(smiles, step, qed_value, reward_value, img_size=(500, 400)):
+    """绘制带有QED标注的分子结构图"""
+    if not smiles or smiles == "":
+        # 空分子的情况
+        img = Image.new('RGB', img_size, 'white')
+        draw = ImageDraw.Draw(img)
+        
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        except:
+            font = ImageFont.load_default()
+        
+        text = f"Step {step}: Empty Molecule\nQED: 0.0\nReward: {reward_value:.4f}"
+        draw.text((10, 10), text, fill='black', font=font)
+        return img
+    
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        # 无效分子的情况
+        img = Image.new('RGB', img_size, 'white')
+        draw = ImageDraw.Draw(img)
+        
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        except:
+            font = ImageFont.load_default()
+        
+        text = f"Step {step}: Invalid Molecule\nSMILES: {smiles}\nQED: 0.0\nReward: {reward_value:.4f}"
+        draw.text((10, 10), text, fill='red', font=font)
+        return img
+    
+    # 绘制分子结构
+    mol_img = Draw.MolToImage(mol, size=(img_size[0], img_size[1]-80))
+    
+    # 创建最终图像
+    final_img = Image.new('RGB', img_size, 'white')
+    final_img.paste(mol_img, (0, 0))
+    
+    # 添加文字标注
+    draw = ImageDraw.Draw(final_img)
+    
+    try:
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+    except:
+        font_large = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+    
+    # 文字信息
+    text_y = img_size[1] - 75
+    draw.text((10, text_y), f"Step {step}", fill='black', font=font_large)
+    draw.text((10, text_y + 25), f"QED: {qed_value:.4f}", fill='blue', font=font_small)
+    #draw.text((10, text_y + 45), f"Reward: {reward_value:.4f}", fill='green', font=font_small)
+    
+    # 在右边显示SMILES（如果不太长）
+    #if len(smiles) < 30:
+        #draw.text((200, text_y + 35), f"SMILES: {smiles}", fill='black', font=font_small)
+    
+    return final_img
+
+
+def run_display(hparams, environment, dqn, model_dir, checkpoint_path, 
+                num_episodes=5, save_video=True):
+    """显示模式：加载训练好的模型，运行几个episode并保存视频"""
+    
+    # 加载训练好的模型
+    logging.info(f"Loading checkpoint from {checkpoint_path}")
+    dqn.load_checkpoint(checkpoint_path)
+    dqn.eval()  # 设置为评估模式
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    dqn.to(device)
+    
+    # 创建保存目录
+    display_dir = os.path.join(model_dir, "display_results")
+    os.makedirs(display_dir, exist_ok=True)
+    
+    for episode in tqdm(range(num_episodes), desc="Display Episodes"):
+        episode_dir = os.path.join(display_dir, f"episode_{episode}")
+        os.makedirs(episode_dir, exist_ok=True)
+        
+        # 运行单个episode
+        _display_episode(environment, dqn, hparams, episode, episode_dir, save_video)
+        
+        # 创建视频
+        if save_video:
+            _create_video_from_images_with_qed(episode_dir)
+    
+    logging.info("Display completed!")
+
+
+def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video=True):
+    """运行单个显示episode"""
+    # 初始化环境
+    environment.initialize()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # 保存QED数据
+    qed_data = []
+    step_data = []
+    
+
+
+    for step in range(hparams.max_steps_per_episode):
+        # 获取有效动作
+        valid_actions = list(environment.get_valid_actions())
+        if not valid_actions:
+            logging.warning(f"Episode {episode}, Step {step}: No valid actions available")
+            break
+
+        steps_left = hparams.max_steps_per_episode - environment.num_steps_taken
+        observations = np.vstack([
+            np.append(get_fingerprint(act, hparams), steps_left)
+            for act in valid_actions
+        ])
+
+
+        head = 0 if not hparams.num_bootstrap_heads else np.random.randint(hparams.num_bootstrap_heads)
+        action_idx = dqn.get_action(observations, head=head, stochastic=False)
+        action = valid_actions[action_idx]
+
+        result = environment.step(action)
+
+        current_qed = QED.qed(Chem.MolFromSmiles(result.state)) if result.state else 0.0
+        qed_data.append(current_qed)
+
+        step_info = {
+            'step': step + 1,
+            'smiles': result.state,
+            'qed': current_qed,
+            'reward': result.reward,
+            'action': str(action),
+            'terminated': result.terminated
+        }
+        step_data.append(step_info)
+
+
+        if save_video:
+            img = draw_molecule_with_qed(result.state, step + 1, current_qed, result.reward)
+            img.save(os.path.join(episode_dir, f"step_{step+1:03d}.png"))
+        
+        logging.info(f"Episode {episode}, Step {step+1}: SMILES: {result.state}, "
+                    f"QED: {current_qed:.4f}, Reward: {result.reward:.4f}")
+        
+        if result.terminated:
+            logging.info(f"Episode {episode} terminated at step {step+1}")
+            break
+    qed_file = os.path.join(episode_dir, "qed_data.json")
+    with open(qed_file, 'w') as f:
+        json.dump({
+            'episode': episode,
+            'steps': step_data,
+            'final_qed': qed_data[-1],
+            'max_qed': max(qed_data),
+            'qed_improvement': qed_data[-1] - qed_data[0]
+        }, f, indent=2)
+    
+    logging.info(f"Episode {episode} completed. Final QED: {qed_data[-1]:.4f}, "
+                f"QED improvement: {qed_data[-1] - qed_data[0]:.4f}")
+
+def _create_video_from_images_with_qed(episode_dir):
+    """从图片创建视频（显示模式专用）"""
+    try:
+        import imageio
+        
+        # 获取所有图片文件
+        image_files = sorted([f for f in os.listdir(episode_dir) if f.endswith('.png')])
+        if len(image_files) < 2:
+            return
+        
+        # 读取图片并创建视频
+        images = []
+        for img_file in image_files:
+            img_path = os.path.join(episode_dir, img_file)
+            img = imageio.imread(img_path)
+            # 每张图片显示1.5秒
+            for _ in range(3):
+                images.append(img)
+        
+        # 生成MP4视频
+        video_path = os.path.join(episode_dir, 'molecule_evolution.mp4')
+        imageio.mimsave(video_path, images, fps=2)
+        logging.info(f"Video saved: {video_path}")
+        
+        # 生成GIF
+        gif_path = os.path.join(episode_dir, 'molecule_evolution.gif')
+        imageio.mimsave(gif_path, images[::2], fps=1, duration=1.5)
+        logging.info(f"GIF saved: {gif_path}")
+        
+    except ImportError:
+        logging.warning("imageio not installed. Install with: pip install imageio[ffmpeg]")
+    except Exception as e:
+        logging.error(f"Error creating video: {e}")
