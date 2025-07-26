@@ -1,12 +1,22 @@
+# Python cache and metadata
 __pycache__/
-*.log
-.env
-*.pt
+*.pyc
+*.pyo
+*.pyd
 *.ipynb_checkpoints/
 *.DS_Store
-**/save/
-**/save_pl/
-**/save_protect_initial/
-**/display/
-**/wandb/
-**/display_protect_initial/
+
+# Logs and environment
+*.log
+.env
+
+# Model weights and intermediate files
+*.pt
+
+# Output and checkpoint folders (recursively)
+wandb/
+mol_dqn/save/
+mol_dqn/save_pl/
+mol_dqn/save_protect_initial/
+mol_dqn/display/
+mol_dqn/display_protect_initial/
