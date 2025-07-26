@@ -1,10 +1,12 @@
 __pycache__/
 *.log
 .env
+*.pt
 *.ipynb_checkpoints/
 *.DS_Store
 **/save/
 **/save_pl/
 **/save_protect_initial/
 **/display/
+**/wandb/
 **/display_protect_initial/
