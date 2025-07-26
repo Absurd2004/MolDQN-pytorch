@@ -1,0 +1,168 @@
+{
+  "episode": 2,
+  "steps": [
+    {
+      "step": 1,
+      "smiles": "Nc1ccccc1",
+      "qed": 0.48007546344555985,
+      "reward": 0.3149775115666319,
+      "action": "Nc1ccccc1",
+      "terminated": false,
+      "protection_info": {
+        "protected_atoms": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "protected_bonds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "total_atoms": 7,
+        "total_bonds": 7
+      }
+    },
+    {
+      "step": 2,
+      "smiles": "Cc1cccc(N)c1",
+      "qed": 0.5002819996278854,
+      "reward": 0.3647055777287285,
+      "action": "Cc1cccc(N)c1",
+      "terminated": false,
+      "protection_info": {
+        "protected_atoms": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "protected_bonds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "total_atoms": 8,
+        "total_bonds": 8
+      }
+    },
+    {
+      "step": 3,
+      "smiles": "CCc1cccc(N)c1",
+      "qed": 0.5634496399051838,
+      "reward": 0.45639420832319894,
+      "action": "CCc1cccc(N)c1",
+      "terminated": false,
+      "protection_info": {
+        "protected_atoms": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "protected_bonds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "total_atoms": 9,
+        "total_bonds": 9
+      }
+    },
+    {
+      "step": 4,
+      "smiles": "C#CCc1cccc(N)c1",
+      "qed": 0.4527157932156289,
+      "reward": 0.435880334098271,
+      "action": "C#CCc1cccc(N)c1",
+      "terminated": false,
+      "protection_info": {
+        "protected_atoms": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "protected_bonds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "total_atoms": 10,
+        "total_bonds": 10
+      }
+    },
+    {
+      "step": 5,
+      "smiles": "C#CCc1cccc(NC)c1",
+      "qed": 0.6266407960806835,
+      "reward": 0.6474415376416514,
+      "action": "C#CCc1cccc(NC)c1",
+      "terminated": true,
+      "protection_info": {
+        "protected_atoms": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "protected_bonds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "total_atoms": 11,
+        "total_bonds": 11
+      }
+    }
+  ],
+  "final_qed": 0.6266407960806835,
+  "max_qed": 0.6266407960806835,
+  "qed_improvement": 0.1465653326351236,
+  "protection_info": {
+    "protected_atoms": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "protected_bonds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "total_atoms": 11,
+    "total_bonds": 11
+  }
+}

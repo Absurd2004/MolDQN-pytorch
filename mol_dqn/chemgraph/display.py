@@ -21,7 +21,8 @@ class QEDRewardMolecule(molecules_mdp.Molecule):
 
     def _reward(self):
         """Reward of a state."""
-        molecule = Chem.MolFromSmiles(self._state)
+        #molecule = Chem.MolFromSmiles(self._state)
+        molecule = self.state_mol
         if molecule is None:
             return 0.0
         qed = QED.qed(molecule)
@@ -85,7 +86,8 @@ def main():
         model_dir=args.model_dir,
         checkpoint_path=args.checkpoint,
         num_episodes=args.num_episodes,
-        save_video=not args.no_video
+        save_video=not args.no_video,
+        protect_initial=True,
     )
     
     logging.info("Display completed!")

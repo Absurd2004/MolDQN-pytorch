@@ -455,13 +455,15 @@ def draw_molecule_with_qed(smiles, step, qed_value, reward_value, img_size=(500,
 
 
 def run_display(hparams, environment, dqn, model_dir, checkpoint_path, 
-                num_episodes=5, save_video=True):
+                num_episodes=5, save_video=True,protect_initial = True):
     """显示模式：加载训练好的模型，运行几个episode并保存视频"""
     
     # 加载训练好的模型
     logging.info(f"Loading checkpoint from {checkpoint_path}")
     dqn.load_checkpoint(checkpoint_path)
+    #dqn.epsilon = 1.0 
     dqn.eval()  # 设置为评估模式
+    #dqn.episilon = 1.0  # 禁用探索
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dqn.to(device)
@@ -475,7 +477,7 @@ def run_display(hparams, environment, dqn, model_dir, checkpoint_path,
         os.makedirs(episode_dir, exist_ok=True)
         
         # 运行单个episode
-        _display_episode(environment, dqn, hparams, episode, episode_dir, save_video)
+        _display_episode(environment, dqn, hparams, episode, episode_dir, save_video,protect_initial)
         
         # 创建视频
         if save_video:
@@ -484,7 +486,7 @@ def run_display(hparams, environment, dqn, model_dir, checkpoint_path,
     logging.info("Display completed!")
 
 
-def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video=True):
+def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video=True,protect_initial=True):
     """运行单个显示episode"""
     # 初始化环境
     environment.initialize()
@@ -493,6 +495,20 @@ def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video
     # 保存QED数据
     qed_data = []
     step_data = []
+
+    if environment.state_mol:
+        from mol_dqn.chemgraph.dqn.environment import get_protection_info
+        protection_info = get_protection_info(environment.state_mol)
+        initial_qed = QED.qed(environment.state_mol)
+        
+        print(f" 初始状态保护信息: {protection_info}")
+        
+        if save_video:
+            if protect_initial:
+                img = draw_molecule_with_protection(environment.state_mol, 0, initial_qed, 0.0)
+            else:
+                img = draw_molecule_with_qed(environment.state_mol, 0, initial_qed, 0.0)
+            img.save(os.path.join(episode_dir, f"step_000.png"))
     
 
 
@@ -511,7 +527,8 @@ def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video
 
 
         head = 0 if not hparams.num_bootstrap_heads else np.random.randint(hparams.num_bootstrap_heads)
-        action_idx = dqn.get_action(observations, head=head, stochastic=False)
+        #action_idx = dqn.get_action(observations, head=head, stochastic=False)
+        action_idx = dqn.get_action(observations, head=head)
         action = valid_actions[action_idx]
 
         result = environment.step(action)
@@ -519,19 +536,29 @@ def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video
         current_qed = QED.qed(Chem.MolFromSmiles(result.state)) if result.state else 0.0
         qed_data.append(current_qed)
 
+        if environment.state_mol and protect_initial:
+            from mol_dqn.chemgraph.dqn.environment import get_protection_info
+            protection_info = get_protection_info(environment.state_mol)
+            print(f" Step {step+1} 保护信息: {protection_info}")
+
         step_info = {
             'step': step + 1,
             'smiles': result.state,
             'qed': current_qed,
             'reward': result.reward,
             'action': str(action),
-            'terminated': result.terminated
+            'terminated': result.terminated,
+            'protection_info': protection_info if (environment.state_mol and protect_initial) else None
         }
         step_data.append(step_info)
 
 
         if save_video:
-            img = draw_molecule_with_qed(result.state, step + 1, current_qed, result.reward)
+            if protect_initial:
+                img = draw_molecule_with_protection(environment.state_mol, step + 1, current_qed, result.reward)
+            else:
+
+                img = draw_molecule_with_qed(environment.state_mol, step + 1, current_qed, result.reward)
             img.save(os.path.join(episode_dir, f"step_{step+1:03d}.png"))
         
         logging.info(f"Episode {episode}, Step {step+1}: SMILES: {result.state}, "
@@ -547,7 +574,8 @@ def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video
             'steps': step_data,
             'final_qed': qed_data[-1],
             'max_qed': max(qed_data),
-            'qed_improvement': qed_data[-1] - qed_data[0]
+            'qed_improvement': qed_data[-1] - qed_data[0],
+            'protection_info': protection_info if (environment.state_mol and protect_initial) else None
         }, f, indent=2)
     
     logging.info(f"Episode {episode} completed. Final QED: {qed_data[-1]:.4f}, "
@@ -586,3 +614,103 @@ def _create_video_from_images_with_qed(episode_dir):
         logging.warning("imageio not installed. Install with: pip install imageio[ffmpeg]")
     except Exception as e:
         logging.error(f"Error creating video: {e}")
+
+def draw_molecule_with_protection(mol_obj, step, qed_value, reward_value, img_size=(600, 500)):
+    """绘制带有保护原子高亮的分子结构图 - 直接使用Mol对象"""
+    if mol_obj is None:
+        # 空分子的情况
+        img = Image.new('RGB', img_size, 'white')
+        draw = ImageDraw.Draw(img)
+        
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        except:
+            font = ImageFont.load_default()
+        
+        text = f"Step {step}: Empty Molecule\nQED: 0.0\nReward: {reward_value:.4f}"
+        draw.text((10, 10), text, fill='black', font=font)
+        return img
+    
+    try:
+        # 获取保护的原子和键
+        protected_atoms = []
+        protected_bonds = []
+        
+        for atom in mol_obj.GetAtoms():
+            if atom.HasProp('_protected') and atom.GetBoolProp('_protected'):
+                protected_atoms.append(atom.GetIdx())
+        
+        for bond in mol_obj.GetBonds():
+            if bond.HasProp('_protected') and bond.GetBoolProp('_protected'):
+                protected_bonds.append(bond.GetIdx())
+        
+        # 设置高亮颜色
+        atom_colors = {}
+        bond_colors = {}
+        
+        # 红色高亮受保护的原子
+        for atom_idx in protected_atoms:
+            atom_colors[atom_idx] = (1.0, 0.0, 0.0)  # 红色
+        
+        # 红色高亮受保护的键
+        for bond_idx in protected_bonds:
+            bond_colors[bond_idx] = (1.0, 0.0, 0.0)  # 红色
+        
+
+        from rdkit.Chem.Draw import rdMolDraw2D
+        
+        drawer = rdMolDraw2D.MolDraw2DCairo(img_size[0], img_size[1] - 100)
+        
+        # 根据是否有保护元素决定绘制方式
+        if protected_atoms or protected_bonds:
+            drawer.DrawMolecule(
+                mol_obj,
+                highlightAtoms=protected_atoms,
+                highlightAtomColors=atom_colors,
+                highlightBonds=protected_bonds,
+                highlightBondColors=bond_colors
+            )
+        else:
+            drawer.DrawMolecule(mol_obj)
+        
+        drawer.FinishDrawing()
+        
+        # 获取绘制的图像
+        mol_img_data = drawer.GetDrawingText()
+        mol_img = Image.open(io.BytesIO(mol_img_data))
+        
+    except Exception as e:
+        # 如果高亮绘制失败，回退到普通绘制
+        print(f"Warning: Failed to draw with protection highlighting, using fallback: {e}")
+        mol_img = Draw.MolToImage(mol_obj, size=(img_size[0], img_size[1] - 100))
+        protected_atoms = []
+        protected_bonds = []
+    
+    # 创建最终图像
+    final_img = Image.new('RGB', img_size, 'white')
+    final_img.paste(mol_img, (0, 0))
+    
+    # 添加文字标注
+    draw = ImageDraw.Draw(final_img)
+    
+    try:
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+    except:
+        font_large = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+    
+    # 文字信息
+    text_y = img_size[1] - 95
+    draw.text((10, text_y), f"Step {step}", fill='black', font=font_large)
+    draw.text((10, text_y + 25), f"QED: {qed_value:.4f}", fill='blue', font=font_small)
+    draw.text((10, text_y + 45), f"Protected Atoms: {len(protected_atoms)}", fill='red', font=font_small)
+    draw.text((10, text_y + 65), f"Protected Bonds: {len(protected_bonds)}", fill='red', font=font_small)
+    
+    # 在右边显示保护状态
+    if protected_atoms or protected_bonds:
+        draw.text((300, text_y + 25), f"red_atoms = Protected", fill='red', font=font_small)
+    else:
+        draw.text((300, text_y + 25), f"No Protection", fill='gray', font=font_small)
+    
+    return final_img

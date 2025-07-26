@@ -4,4 +4,7 @@ __pycache__/
 *.ipynb_checkpoints/
 *.DS_Store
 **/save/
+**/save_pl/
+**/save_protect_initial/
 **/display/
+**/display_protect_initial/

@@ -80,7 +80,12 @@ class DoubleDQNAgent(nn.Module):
             self.epsilon = update_epsilon
             
         # Epsilon-greedy 探索
+        #print(f"action number: {observations.shape[0]}")
+        #print(f"self.epsilon: {self.epsilon}")
         if stochastic and np.random.uniform() < self.epsilon:
+            #assert False
+
+            #print(f"action number: {observations.shape[0]}")
             return np.random.randint(0, observations.shape[0])
         else:
             return self._run_action_op(observations, head)

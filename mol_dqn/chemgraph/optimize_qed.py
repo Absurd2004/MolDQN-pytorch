@@ -40,7 +40,8 @@ class QEDRewardMolecule(molecules_mdp.Molecule):
         Returns:
         Float. QED of the current state.
         """
-        molecule = Chem.MolFromSmiles(self._state)
+        #molecule = Chem.MolFromSmiles(self._state)
+        molecule = self.state_mol
         if molecule is None:
             return 0.0
         qed = QED.qed(molecule)

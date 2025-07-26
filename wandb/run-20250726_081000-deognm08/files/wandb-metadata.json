@@ -1,0 +1,71 @@
+{
+  "os":  "Linux-5.4.0-135-generic-x86_64-with-glibc2.28",
+  "python":  "CPython 3.10.0",
+  "startedAt":  "2025-07-26T12:10:00.370883Z",
+  "args":  [
+    "--model_dir=./mol_dqn/save_protect_initial",
+    "--hparams=./mol_dqn/chemgraph/configs/naive_dqn.json",
+    "--start_molecule",
+    "C1=CC2=CC5=CC=C(C=C4C=CC(C=C3C=CC(=CC1=N2)N3)=N4)N5",
+    "--wandb_run_name",
+    "protect_porphyrin_run-1",
+    "--use_wandb",
+    "True"
+  ],
+  "program":  "/home/yangyongkun/MolDQN-pytorch/./mol_dqn/chemgraph/optimize_qed.py",
+  "codePath":  "mol_dqn/chemgraph/optimize_qed.py",
+  "codePathLocal":  "mol_dqn/chemgraph/optimize_qed.py",
+  "git":  {
+    "remote":  "git@github.com:Absurd2004/MolDQN-pytorch.git",
+    "commit":  "188ba9990c4ed08a9bc490bcfec138105e9bd6ae"
+  },
+  "email":  "yongkunyang11@gmail.com",
+  "root":  "/home/yangyongkun/MolDQN-pytorch",
+  "host":  "user-Super-Server",
+  "executable":  "/home/yangyongkun/miniconda3/envs/moldqn/bin/python",
+  "cpu_count":  16,
+  "cpu_count_logical":  32,
+  "gpu":  "NVIDIA GeForce RTX 2080 Ti",
+  "gpu_count":  4,
+  "disk":  {
+    "/":  {
+      "total":  "1618119405568",
+      "used":  "1431918538752"
+    }
+  },
+  "memory":  {
+    "total":  "270342848512"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA GeForce RTX 2080 Ti",
+      "memoryTotal":  "11811160064",
+      "cudaCores":  4352,
+      "architecture":  "Turing",
+      "uuid":  "GPU-3b0efb97-00c1-078f-e6f3-87d2e863bc2f"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 2080 Ti",
+      "memoryTotal":  "11811160064",
+      "cudaCores":  4352,
+      "architecture":  "Turing",
+      "uuid":  "GPU-2684b786-aa17-4fd4-b339-4ded3feae7f8"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 2080 Ti",
+      "memoryTotal":  "11811160064",
+      "cudaCores":  4352,
+      "architecture":  "Turing",
+      "uuid":  "GPU-5cbd237d-2bf5-b8b2-5df8-8b1182d142f0"
+    },
+    {
+      "name":  "NVIDIA GeForce RTX 2080 Ti",
+      "memoryTotal":  "11811160064",
+      "cudaCores":  4352,
+      "architecture":  "Turing",
+      "uuid":  "GPU-264afd55-802e-993f-198c-66dfc41a15cb"
+    }
+  ],
+  "cudaVersion":  "12.1",
+  "writerId":  "j5yaxcpa9bexm3k5j7gc6u0enckdkln3"
+}
