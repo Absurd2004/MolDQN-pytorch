@@ -18,5 +18,7 @@ wandb/
 mol_dqn/save/
 mol_dqn/save_pl/
 mol_dqn/save_protect_initial/
+mol_dqn/save_with_heavy_atoms/
 mol_dqn/display/
+mol_dqn/display_pl/
 mol_dqn/display_protect_initial/

@@ -67,6 +67,10 @@ def run_training(hparams, environment, dqn, model_dir,use_wandb=False):
 
     global_step = 0
 
+    best_reward = float('-inf')
+    best_model_path = os.path.join(model_dir, 'best_model.pt')
+    eval_frequency = max(1, hparams.eval_frequency)
+
     #print(f"sampling之前跑通")
 
     #assert False,"检查点"
@@ -95,6 +99,26 @@ def run_training(hparams, environment, dqn, model_dir,use_wandb=False):
                     "target_network_updates": episode + 1,
                     "episode": episode
                })
+        if ((episode + 1) % eval_frequency == 0 and episode > min(50, hparams.num_episodes / 10)) or episode == hparams.num_episodes - 1:
+            avg_final_reward = _evaluate_model(environment, dqn, hparams, num_eval_episodes=1)
+
+            summary_writer.add_scalar('evaluation/average_final_reward', avg_final_reward, global_step)
+            logging.info(f'Evaluation after episode {episode + 1}: Average Final Reward (QED): {avg_final_reward:.4f}')
+
+            if avg_final_reward > best_reward:
+                best_reward = avg_final_reward
+                dqn.save_checkpoint(best_model_path)
+                logging.info(f'New best model saved with final average reward(QED): {best_reward:.4f}')
+
+
+
+            if use_wandb:
+                wandb.log({
+                    "evaluation/average_final_reward": avg_final_reward,
+                    "evaluation/best_reward": best_reward,
+                    "episode": episode,
+                    "global_step": global_step
+                })
         
         if (episode + 1) % hparams.save_frequency == 0:
             """
@@ -345,7 +369,55 @@ def _step(environment, dqn, memory, episode, hparams, exploration, head, model_d
 
 
 
+def _evaluate_model(environment, dqn, hparams, num_eval_episodes=3):
+    """评估模型性能（不使用探索策略）
     
+    Args:
+        environment: 环境实例
+        dqn: DQN智能体
+        hparams: 超参数
+        num_eval_episodes: 评估的episode数量
+    
+    Returns:
+        float: 平均奖励
+    """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    dqn.eval()
+
+    final_rewards = []
+
+    for eval_episode in range(num_eval_episodes):
+        environment.initialize()
+        episode_reward = 0.0
+
+        for step in range(hparams.max_steps_per_episode):
+            valid_actions = list(environment.get_valid_actions())
+            if not valid_actions:
+                logging.warning(f"Evaluation Episode {eval_episode}, Step {step}: No valid actions available")
+                break
+            steps_left = hparams.max_steps_per_episode - environment.num_steps_taken
+
+            observations = np.vstack([
+                np.append(get_fingerprint(act, hparams), steps_left)
+                for act in valid_actions
+            ])
+
+            head = 0 if not hparams.num_bootstrap_heads else np.random.randint(hparams.num_bootstrap_heads)
+            action_idx = dqn.get_action(observations, head=head, stochastic=False)
+            action = valid_actions[action_idx]
+
+            result = environment.step(action)
+            #episode_reward += result.reward
+
+            final_reward = result.reward
+
+
+            if result.terminated:
+                break
+        
+        final_rewards.append(final_reward)
+    dqn.train() #恢复训练模式
+    return np.mean(final_rewards)
 
 
 
@@ -463,7 +535,7 @@ def run_display(hparams, environment, dqn, model_dir, checkpoint_path,
     dqn.load_checkpoint(checkpoint_path)
     #dqn.epsilon = 1.0 
     dqn.eval()  # 设置为评估模式
-    #dqn.episilon = 1.0  # 禁用探索
+
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dqn.to(device)
