@@ -329,9 +329,9 @@ def _step(environment, dqn, memory, episode, hparams, exploration, head, model_d
         observations, head=head, update_epsilon=exploration.value(episode))] #在当前步里DQN产生的action，也是next_state,最终计算当前Q(s,a)的时候用的就是这个action
     
     action_t_fingerprint = np.append(
-        get_fingerprint(action, hparams), steps_left) #current_state
+        get_fingerprint(action, hparams), steps_left) #current_state 
     
-    result = environment.step(action) #在这一步之后环境里的state就更改了，编程action__fingerprints，这里的reward是已经变成action_fingerprints之后的reward
+    result = environment.step(action) #在这一步之后环境里的state就更改了，变成action__fingerprints，这里的reward是已经变成action_fingerprint之后的reward
 
     if save_video and result.state:
         try:
@@ -527,7 +527,7 @@ def draw_molecule_with_qed(smiles, step, qed_value, reward_value, img_size=(500,
 
 
 def run_display(hparams, environment, dqn, model_dir, checkpoint_path, 
-                num_episodes=5, save_video=True,protect_initial = True):
+                num_episodes=5, reward_name = "QED",save_video=True,protect_initial = True):
     """显示模式：加载训练好的模型，运行几个episode并保存视频"""
     
     # 加载训练好的模型
@@ -542,14 +542,17 @@ def run_display(hparams, environment, dqn, model_dir, checkpoint_path,
     
     # 创建保存目录
     display_dir = os.path.join(model_dir, "display_results")
-    os.makedirs(display_dir, exist_ok=True)
+    #把现在时间也加到display_dir中
+    display_dir += f"{reward_name}_{time.strftime('%Y%m%d_%H%M%S')}"
+    if not os.path.exists(display_dir):
+        os.makedirs(display_dir, exist_ok=True)
     
     for episode in tqdm(range(num_episodes), desc="Display Episodes"):
         episode_dir = os.path.join(display_dir, f"episode_{episode}")
         os.makedirs(episode_dir, exist_ok=True)
         
         # 运行单个episode
-        _display_episode(environment, dqn, hparams, episode, episode_dir, save_video,protect_initial)
+        _display_episode(environment, dqn, hparams, episode, episode_dir, reward_name,save_video,protect_initial)
         
         # 创建视频
         if save_video:
@@ -558,28 +561,32 @@ def run_display(hparams, environment, dqn, model_dir, checkpoint_path,
     logging.info("Display completed!")
 
 
-def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video=True,protect_initial=True):
+def _display_episode(environment, dqn, hparams, episode, episode_dir, reward_name = "QED",save_video=True,protect_initial=True):
     """运行单个显示episode"""
     # 初始化环境
     environment.initialize()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # 保存QED数据
-    qed_data = []
+    reward_data = []
     step_data = []
 
     if environment.state_mol:
         from mol_dqn.chemgraph.dqn.environment import get_protection_info
         protection_info = get_protection_info(environment.state_mol)
-        initial_qed = QED.qed(environment.state_mol)
+        if reward_name == "QED":
+            initial_reward = QED.qed(environment.state_mol)
+        elif reward_name == "LogP":
+            initial_reward = molecules.penalized_logp(environment.state_mol)
+        #initial_qed = QED.qed(environment.state_mol)
         
         print(f" 初始状态保护信息: {protection_info}")
         
         if save_video:
             if protect_initial:
-                img = draw_molecule_with_protection(environment.state_mol, 0, initial_qed, 0.0)
+                img = draw_molecule_with_protection(environment.state_mol, 0, initial_reward,reward_name=reward_name)
             else:
-                img = draw_molecule_with_qed(environment.state_mol, 0, initial_qed, 0.0)
+                img = draw_molecule_with_qed(environment.state_mol, 0, initial_reward, reward_name=reward_name)
             img.save(os.path.join(episode_dir, f"step_000.png"))
     
 
@@ -605,8 +612,13 @@ def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video
 
         result = environment.step(action)
 
-        current_qed = QED.qed(Chem.MolFromSmiles(result.state)) if result.state else 0.0
-        qed_data.append(current_qed)
+        if reward_name == "QED":
+            current_reward = QED.qed(Chem.MolFromSmiles(result.state)) if result.state else 0.0
+        elif reward_name == "LogP":
+            current_reward = molecules.penalized_logp(Chem.MolFromSmiles(result.state)) if result.state else 0.0
+
+
+        reward_data.append(current_reward)
 
         if environment.state_mol and protect_initial:
             from mol_dqn.chemgraph.dqn.environment import get_protection_info
@@ -616,8 +628,7 @@ def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video
         step_info = {
             'step': step + 1,
             'smiles': result.state,
-            'qed': current_qed,
-            'reward': result.reward,
+            'reward': current_reward,
             'action': str(action),
             'terminated': result.terminated,
             'protection_info': protection_info if (environment.state_mol and protect_initial) else None
@@ -627,32 +638,45 @@ def _display_episode(environment, dqn, hparams, episode, episode_dir, save_video
 
         if save_video:
             if protect_initial:
-                img = draw_molecule_with_protection(environment.state_mol, step + 1, current_qed, result.reward)
+                img = draw_molecule_with_protection(environment.state_mol, step + 1, current_reward,reward_name=reward_name)
             else:
 
-                img = draw_molecule_with_qed(environment.state_mol, step + 1, current_qed, result.reward)
+                img = draw_molecule_with_qed(environment.state_mol, step + 1, current_reward, result.reward)
             img.save(os.path.join(episode_dir, f"step_{step+1:03d}.png"))
         
-        logging.info(f"Episode {episode}, Step {step+1}: SMILES: {result.state}, "
-                    f"QED: {current_qed:.4f}, Reward: {result.reward:.4f}")
+        if reward_name == "QED":
+            logging.info(f"Episode {episode}, Step {step+1}: SMILES: {result.state}, "
+                        f"QED: {current_reward:.4f}")
+        elif reward_name == "LogP":
+            logging.info(f"Episode {episode}, Step {step+1}: SMILES: {result.state}, "
+                        f"LogP: {current_reward:.4f}")
         
         if result.terminated:
             logging.info(f"Episode {episode} terminated at step {step+1}")
             break
-    qed_file = os.path.join(episode_dir, "qed_data.json")
+    if reward_name == "QED":
+        qed_file = os.path.join(episode_dir, "qed_data.json")
+    elif reward_name == "LogP":
+        qed_file = os.path.join(episode_dir, "logp_data.json")
+    
     with open(qed_file, 'w') as f:
         json.dump({
             'episode': episode,
             'steps': step_data,
-            'final_qed': qed_data[-1],
-            'max_qed': max(qed_data),
-            'qed_improvement': qed_data[-1] - qed_data[0],
+            'reward_name': reward_name,
+            'final_reward': reward_data[-1],
+            'max_reward': max(reward_data),
+            'reward_improvement': reward_data[-1] - reward_data[0],
             'protection_info': protection_info if (environment.state_mol and protect_initial) else None
         }, f, indent=2)
     
-    logging.info(f"Episode {episode} completed. Final QED: {qed_data[-1]:.4f}, "
-                f"QED improvement: {qed_data[-1] - qed_data[0]:.4f}")
-
+    if reward_name == "QED":
+        logging.info(f"Episode {episode} completed. Final QED: {reward_data[-1]:.4f}, "
+                    f"QED improvement: {reward_data[-1] - reward_data[0]:.4f}")
+    elif reward_name == "LogP":
+        logging.info(f"Episode {episode} completed. Final LogP: {reward_data[-1]:.4f}, "
+                    f"LogP improvement: {reward_data[-1] - reward_data[0]:.4f}")
+        
 def _create_video_from_images_with_qed(episode_dir):
     """从图片创建视频（显示模式专用）"""
     try:
@@ -687,7 +711,7 @@ def _create_video_from_images_with_qed(episode_dir):
     except Exception as e:
         logging.error(f"Error creating video: {e}")
 
-def draw_molecule_with_protection(mol_obj, step, qed_value, reward_value, img_size=(600, 500)):
+def draw_molecule_with_protection(mol_obj, step, reward_value, reward_name = "QED",img_size=(600, 500)):
     """绘制带有保护原子高亮的分子结构图 - 直接使用Mol对象"""
     if mol_obj is None:
         # 空分子的情况
@@ -699,7 +723,12 @@ def draw_molecule_with_protection(mol_obj, step, qed_value, reward_value, img_si
         except:
             font = ImageFont.load_default()
         
-        text = f"Step {step}: Empty Molecule\nQED: 0.0\nReward: {reward_value:.4f}"
+        if reward_name == "QED":
+            text = f"Step {step}: Empty Molecule\nQED: 0.0\n"
+        elif reward_name == "LogP":
+            text = f"Step {step}: Empty Molecule\nLogP: 0.0\n"
+        
+        
         draw.text((10, 10), text, fill='black', font=font)
         return img
     
@@ -775,7 +804,10 @@ def draw_molecule_with_protection(mol_obj, step, qed_value, reward_value, img_si
     # 文字信息
     text_y = img_size[1] - 95
     draw.text((10, text_y), f"Step {step}", fill='black', font=font_large)
-    draw.text((10, text_y + 25), f"QED: {qed_value:.4f}", fill='blue', font=font_small)
+    if reward_name == "QED":
+        draw.text((10, text_y + 25), f"QED: {reward_value:.4f}", fill='blue', font=font_small)
+    elif reward_name == "LogP":
+        draw.text((10, text_y + 25), f"LogP: {reward_value:.4f}", fill='blue', font=font_small)
     draw.text((10, text_y + 45), f"Protected Atoms: {len(protected_atoms)}", fill='red', font=font_small)
     draw.text((10, text_y + 65), f"Protected Bonds: {len(protected_bonds)}", fill='red', font=font_small)
     

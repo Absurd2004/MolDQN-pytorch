@@ -239,6 +239,7 @@ def get_valid_actions(state, atom_types, allow_removal, allow_no_modification,
   mol = Chem.MolFromSmiles(state)
   if mol is None:
     raise ValueError('Received invalid state: %s' % state)
+  
   atom_valences = {
       atom_type: molecules.atom_valences([atom_type])[0]
       for atom_type in atom_types
