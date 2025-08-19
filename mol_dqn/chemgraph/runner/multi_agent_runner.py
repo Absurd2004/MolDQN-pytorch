@@ -125,7 +125,6 @@ class AdversarialTrainer:
                 opponent_template=self.agent_B,
                 dual_env=self.dual_env_A,
                 agent_name='A',
-                global_step_attr='global_step_A',
                 use_wandb=use_wandb
             )
 
@@ -142,7 +141,6 @@ class AdversarialTrainer:
                 opponent_template=self.agent_A,
                 dual_env=self.dual_env_B,
                 agent_name='B',
-                global_step_attr='global_step_B',
                 use_wandb=use_wandb
             )
 
@@ -158,10 +156,16 @@ class AdversarialTrainer:
                 logging.info("Updated target networks for both agents")
 
                 if use_wandb:
+                    # 分别为两个agent记录target network更新
                     wandb.log({
-                        "target_network_updates": epoch + 1,
-                        "epoch": epoch
-                    })
+                        "training/agent_A_target_network_updates": epoch + 1,
+                        "training/agent_A_epoch": epoch
+                    }, step=self.global_step_A)
+                    
+                    wandb.log({
+                        "training/agent_B_target_network_updates": epoch + 1,
+                        "training/agent_B_epoch": epoch
+                    }, step=self.global_step_B)
                 
             #print(f"eval_frequency: {getattr(self.hparams, 'eval_frequency', 10)}")
             
@@ -178,7 +182,7 @@ class AdversarialTrainer:
 
 
     def _train_agent_epoch(self, epoch, main_agent, main_buffer, opponent_history, 
-                          opponent_template, dual_env, agent_name, global_step_attr, use_wandb=False):
+                          opponent_template, dual_env, agent_name, use_wandb=False):
         """训练单个智能体一个 epoch"""
 
         warmup_epochs = getattr(self.hparams, 'sparse_reward_warmup_epochs', 0)
@@ -197,8 +201,10 @@ class AdversarialTrainer:
                 sparse_weight = 1 - alpha
         else:
             sparse_weight = 1.0 if self.hparams.use_sparse_reward else 0.0
+        
+        current_global_step = self.global_step_A if agent_name == 'A' else self.global_step_B
+        self.summary_writer.add_scalar(f'training/{agent_name}_sparse_weight', sparse_weight, current_global_step)
             
-        self.summary_writer.add_scalar(f'training/{agent_name}_sparse_weight', sparse_weight, epoch)
 
         epoch_stats = {'win': 0, 'loss': 0, 'draw': 0, 'total': 0}
 
@@ -234,30 +240,43 @@ class AdversarialTrainer:
             #print(f"Agent {agent_name}: Epoch {epoch + 1}, Episode {episode_in_epoch + 1}/{self.hparams.episodes_per_epoch}, Global Episode {global_episode + 1}")
 
 
-            current_global_step = self._run_adversarial_episode(
-                dual_env=dual_env,
-                main_agent=main_agent,
-                opponent_agent=opponent_agent,
-                main_buffer=main_buffer,
-                episode=global_episode,
-                global_step=getattr(self, global_step_attr),
-                agent_name=agent_name,
-                epoch_stats=epoch_stats,  # 传入当前epoch的统计
-                use_wandb=use_wandb
-            )
+            if agent_name == 'A':
+                self.global_step_A = self._run_adversarial_episode(
+                    dual_env=dual_env,
+                    main_agent=main_agent,
+                    opponent_agent=opponent_agent,
+                    main_buffer=main_buffer,
+                    episode=global_episode,
+                    global_step=self.global_step_A,
+                    agent_name=agent_name,
+                    epoch_stats=epoch_stats,
+                    use_wandb=use_wandb
+                )
+            else:  # agent_name == 'B'
+                self.global_step_B = self._run_adversarial_episode(
+                    dual_env=dual_env,
+                    main_agent=main_agent,
+                    opponent_agent=opponent_agent,
+                    main_buffer=main_buffer,
+                    episode=global_episode,
+                    global_step=self.global_step_B,
+                    agent_name=agent_name,
+                    epoch_stats=epoch_stats,
+                    use_wandb=use_wandb
+                )
 
-
-            setattr(self, global_step_attr, current_global_step)
         
         #assert False,"train first epoch finished"
         
         epoch_win_rate = epoch_stats['win'] / epoch_stats['total'] if epoch_stats['total'] > 0 else 0.0
 
 
-        self.summary_writer.add_scalar(f'training/{agent_name}_win_rate', epoch_win_rate, epoch)
+        current_global_step = self.global_step_A if agent_name == 'A' else self.global_step_B
+        self.summary_writer.add_scalar(f'training/{agent_name}_win_rate', epoch_win_rate, current_global_step)
 
 
         if use_wandb:
+            # === 修改：使用对应agent的global_step作为wandb横坐标 ===
             wandb.log({
                 f"training/{agent_name}_win_rate": epoch_win_rate,
                 f"training/{agent_name}_wins": epoch_stats['win'],
@@ -265,14 +284,14 @@ class AdversarialTrainer:
                 f"training/{agent_name}_draws": epoch_stats['draw'],
                 f"training/{agent_name}_total": epoch_stats['total'],
                 f"training/{agent_name}_sparse_weight": sparse_weight,
-                f"training/{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,  # 新增
-                "epoch": epoch
-            })
-        
+                f"training/{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,
+                f"training/{agent_name}_epoch": epoch,  # 添加epoch作为额外信息
+            }, step=current_global_step)  # === 关键：使用对应agent的global_step作为横坐标 ===
+
         logging.info(f'Agent {agent_name} Epoch {epoch}: Win Rate={epoch_win_rate:.3f} '
                 f'({epoch_stats["win"]}/{epoch_stats["total"]}), '
                 f'Wins={epoch_stats["win"]}, Losses={epoch_stats["loss"]}, Draws={epoch_stats["draw"]}, '
-                f'Best QED={self.best_qed_A if agent_name == "A" else self.best_qed_B:.4f}, '  # 新增
+                f'Best QED={self.best_qed_A if agent_name == "A" else self.best_qed_B:.4f}, '
                 f'Sparse Weight={sparse_weight:.3f}')
         #self.summary_writer.add_scalar(f'training/{agent_name}_win_rate', epoch_win_rate, epoch)
 
@@ -501,13 +520,14 @@ class AdversarialTrainer:
                 f"episode/{agent_name}_dense_reward": final_dense_reward,
                 f"episode/{agent_name}_sparse_reward": final_sparse_reward,
                 f"episode/{agent_name}_total_reward": final_total_reward,
-                f"episode/{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,  # 新增
+                f"episode/{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,
                 f"episode/{agent_name}_smiles": str(main_result.state) if main_result else "None",
                 f"episode/{agent_name}_steps": step + 1,
                 f"episode/{agent_name}_win_result": win_result if 'win_result' in locals() else "unknown",
-                "episode": episode,
-                "global_step": global_step
-            })
+                f"episode/{agent_name}_episode": episode,  # 添加episode作为额外信息
+            }, step=global_step)  # === 使用传入的对应agent的global_step ===
+
+
         
         logging.info(f'Agent {agent_name} Episode {episode}: DenseReward={final_dense_reward:.4f}, '
                 f'SparseReward={final_sparse_reward:.4f}, TotalReward={final_total_reward:.4f}, '
@@ -587,9 +607,8 @@ class AdversarialTrainer:
             wandb.log({
                 f"training/{agent_name}_loss": loss,
                 f"training/{agent_name}_td_error_mean": td_error.mean().item(),
-                "episode": episode,
-                "global_step": global_step
-            })
+                f"training/{agent_name}_episode": episode,  # 添加episode作为额外信息
+            }, step=global_step) 
         
         logging.info(f'Agent {agent_name} Training: Loss={loss:.4f}, TD_Error={td_error.mean().item():.4f}')
 
@@ -612,15 +631,21 @@ class AdversarialTrainer:
 
 
         
-        self.summary_writer.add_scalar('evaluation/agent_A_win_rate', eval_win_rate_A, epoch)
-        self.summary_writer.add_scalar('evaluation/agent_B_win_rate', eval_win_rate_B, epoch)
+        self.summary_writer.add_scalar('evaluation/agent_A_win_rate', eval_win_rate_A, self.global_step_A)
+        self.summary_writer.add_scalar('evaluation/agent_B_win_rate', eval_win_rate_B, self.global_step_B)
         
         if use_wandb:
+            # === 分别记录，使用各自的global_step ===
             wandb.log({
                 "evaluation/agent_A_win_rate": eval_win_rate_A,
+                "evaluation/agent_A_epoch": epoch,
+            }, step=self.global_step_A)
+            
+            wandb.log({
                 "evaluation/agent_B_win_rate": eval_win_rate_B,
-                "epoch": epoch
-            })
+                "evaluation/agent_B_epoch": epoch,
+            }, step=self.global_step_B)
+
         
         # 保存最佳模型（可以基于奖励或胜率）
         if eval_win_rate_A > getattr(self, 'best_win_rate_A', 0.0):

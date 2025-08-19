@@ -13,7 +13,7 @@
   "num_epoch": 1000,
   "batch_size": 128,
   "learning_frequency": 4,
-  "update_frequency": 20,
+  "update_frequency": 4,
   "grad_clipping": 10,
   "gamma": 1.0,
   "discount_factor": 0.9,
