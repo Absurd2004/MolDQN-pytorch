@@ -105,6 +105,22 @@ class AdversarialTrainer:
         """运行对抗训练主循环"""
         logging.info("Starting adversarial training...")
 
+        if use_wandb:
+            # === 新增：为每个agent定义独立的step metric ===
+            wandb.define_metric("agent_A_step")
+            wandb.define_metric("agent_B_step")
+            
+            # 为agent_A的所有指标定义使用agent_A_step作为横坐标
+            wandb.define_metric("training/agent_A*", step_metric="agent_A_step")
+            wandb.define_metric("episode/agent_A*", step_metric="agent_A_step")
+            wandb.define_metric("evaluation/agent_A*", step_metric="agent_A_step")
+            
+            # 为agent_B的所有指标定义使用agent_B_step作为横坐标
+            wandb.define_metric("training/agent_B*", step_metric="agent_B_step")
+            wandb.define_metric("episode/agent_B*", step_metric="agent_B_step")
+            wandb.define_metric("evaluation/agent_B*", step_metric="agent_B_step")
+
+
         self.agent_A.to(self.device)
         self.agent_B.to(self.device)
 
@@ -156,16 +172,18 @@ class AdversarialTrainer:
                 logging.info("Updated target networks for both agents")
 
                 if use_wandb:
-                    # 分别为两个agent记录target network更新
+                    # === 修改：添加agent_前缀并使用define_metric ===
                     wandb.log({
                         "training/agent_A_target_network_updates": epoch + 1,
-                        "training/agent_A_epoch": epoch
-                    }, step=self.global_step_A)
+                        "training/agent_A_epoch": epoch,
+                        "agent_A_step": self.global_step_A,
+                    })
                     
                     wandb.log({
                         "training/agent_B_target_network_updates": epoch + 1,
-                        "training/agent_B_epoch": epoch
-                    }, step=self.global_step_B)
+                        "training/agent_B_epoch": epoch,
+                        "agent_B_step": self.global_step_B,
+                    })
                 
             #print(f"eval_frequency: {getattr(self.hparams, 'eval_frequency', 10)}")
             
@@ -276,17 +294,18 @@ class AdversarialTrainer:
 
 
         if use_wandb:
-            # === 修改：使用对应agent的global_step作为wandb横坐标 ===
+            # === 修改：添加agent_前缀并使用define_metric ===
             wandb.log({
-                f"training/{agent_name}_win_rate": epoch_win_rate,
-                f"training/{agent_name}_wins": epoch_stats['win'],
-                f"training/{agent_name}_losses": epoch_stats['loss'],
-                f"training/{agent_name}_draws": epoch_stats['draw'],
-                f"training/{agent_name}_total": epoch_stats['total'],
-                f"training/{agent_name}_sparse_weight": sparse_weight,
-                f"training/{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,
-                f"training/{agent_name}_epoch": epoch,  # 添加epoch作为额外信息
-            }, step=current_global_step)  # === 关键：使用对应agent的global_step作为横坐标 ===
+                f"training/agent_{agent_name}_win_rate": epoch_win_rate,
+                f"training/agent_{agent_name}_wins": epoch_stats['win'],
+                f"training/agent_{agent_name}_losses": epoch_stats['loss'],
+                f"training/agent_{agent_name}_draws": epoch_stats['draw'],
+                f"training/agent_{agent_name}_total": epoch_stats['total'],
+                f"training/agent_{agent_name}_sparse_weight": sparse_weight,
+                f"training/agent_{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,
+                f"training/agent_{agent_name}_epoch": epoch,
+                f"agent_{agent_name}_step": current_global_step,  # 添加对应的step
+            })
 
         logging.info(f'Agent {agent_name} Epoch {epoch}: Win Rate={epoch_win_rate:.3f} '
                 f'({epoch_stats["win"]}/{epoch_stats["total"]}), '
@@ -508,30 +527,30 @@ class AdversarialTrainer:
 
 
 
-        self.summary_writer.add_scalar(f'episode/{agent_name}_dense_reward', final_dense_reward, global_step)
-        self.summary_writer.add_scalar(f'episode/{agent_name}_sparse_reward', final_sparse_reward, global_step)
-        self.summary_writer.add_scalar(f'episode/{agent_name}_total_reward', final_total_reward, global_step)
-        self.summary_writer.add_scalar(f'episode/{agent_name}_best_qed', self.best_qed_A if agent_name == 'A' else self.best_qed_B, global_step)  # 新增
-        self.summary_writer.add_text(f'episode/{agent_name}_smiles', str(main_result.state) if main_result else "None", global_step)
-
+        # === 修改：添加agent_前缀 ===
+        self.summary_writer.add_scalar(f'episode/agent_{agent_name}_dense_reward', final_dense_reward, global_step)
+        self.summary_writer.add_scalar(f'episode/agent_{agent_name}_sparse_reward', final_sparse_reward, global_step)
+        self.summary_writer.add_scalar(f'episode/agent_{agent_name}_total_reward', final_total_reward, global_step)
+        self.summary_writer.add_scalar(f'episode/agent_{agent_name}_best_qed', self.best_qed_A if agent_name == 'A' else self.best_qed_B, global_step)
+        self.summary_writer.add_text(f'episode/agent_{agent_name}_smiles', str(main_result.state) if main_result else "None", global_step)
 
         if use_wandb:
+            # === 修改：添加agent_前缀并使用define_metric ===
             wandb.log({
-                f"episode/{agent_name}_dense_reward": final_dense_reward,
-                f"episode/{agent_name}_sparse_reward": final_sparse_reward,
-                f"episode/{agent_name}_total_reward": final_total_reward,
-                f"episode/{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,
-                f"episode/{agent_name}_smiles": str(main_result.state) if main_result else "None",
-                f"episode/{agent_name}_steps": step + 1,
-                f"episode/{agent_name}_win_result": win_result if 'win_result' in locals() else "unknown",
-                f"episode/{agent_name}_episode": episode,  # 添加episode作为额外信息
-            }, step=global_step)  # === 使用传入的对应agent的global_step ===
+                f"episode/agent_{agent_name}_dense_reward": final_dense_reward,
+                f"episode/agent_{agent_name}_sparse_reward": final_sparse_reward,
+                f"episode/agent_{agent_name}_total_reward": final_total_reward,
+                f"episode/agent_{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,
+                f"episode/agent_{agent_name}_smiles": str(main_result.state) if main_result else "None",
+                f"episode/agent_{agent_name}_steps": step + 1,
+                f"episode/agent_{agent_name}_win_result": win_result if 'win_result' in locals() else "unknown",
+                f"episode/agent_{agent_name}_episode": episode,
+                f"agent_{agent_name}_step": global_step,  # 添加对应的step
+            })
 
-
-        
         logging.info(f'Agent {agent_name} Episode {episode}: DenseReward={final_dense_reward:.4f}, '
                 f'SparseReward={final_sparse_reward:.4f}, TotalReward={final_total_reward:.4f}, '
-                f'BestQED={self.best_qed_A if agent_name == "A" else self.best_qed_B:.4f}, '  # 新增
+                f'BestQED={self.best_qed_A if agent_name == "A" else self.best_qed_B:.4f}, '
                 f'Steps={step+1}, Time={episode_time:.2f}s, Result={win_result if "win_result" in locals() else "unknown"}')
         
         
@@ -604,11 +623,13 @@ class AdversarialTrainer:
         self.summary_writer.add_scalar(f'training/{agent_name}_loss', loss, global_step)
 
         if use_wandb:
+            # === 修改：添加agent_前缀并使用define_metric ===
             wandb.log({
-                f"training/{agent_name}_loss": loss,
-                f"training/{agent_name}_td_error_mean": td_error.mean().item(),
-                f"training/{agent_name}_episode": episode,  # 添加episode作为额外信息
-            }, step=global_step) 
+                f"training/agent_{agent_name}_loss": loss,
+                f"training/agent_{agent_name}_td_error_mean": td_error.mean().item(),
+                f"training/agent_{agent_name}_episode": episode,
+                f"agent_{agent_name}_step": global_step,  # 添加对应的step
+            })
         
         logging.info(f'Agent {agent_name} Training: Loss={loss:.4f}, TD_Error={td_error.mean().item():.4f}')
 
@@ -631,20 +652,23 @@ class AdversarialTrainer:
 
 
         
+        # === 修改：添加agent_前缀 ===
         self.summary_writer.add_scalar('evaluation/agent_A_win_rate', eval_win_rate_A, self.global_step_A)
         self.summary_writer.add_scalar('evaluation/agent_B_win_rate', eval_win_rate_B, self.global_step_B)
         
         if use_wandb:
-            # === 分别记录，使用各自的global_step ===
+            # === 修改：添加agent_前缀并使用define_metric ===
             wandb.log({
                 "evaluation/agent_A_win_rate": eval_win_rate_A,
                 "evaluation/agent_A_epoch": epoch,
-            }, step=self.global_step_A)
+                "agent_A_step": self.global_step_A,
+            })
             
             wandb.log({
                 "evaluation/agent_B_win_rate": eval_win_rate_B,
                 "evaluation/agent_B_epoch": epoch,
-            }, step=self.global_step_B)
+                "agent_B_step": self.global_step_B,
+            })
 
         
         # 保存最佳模型（可以基于奖励或胜率）
