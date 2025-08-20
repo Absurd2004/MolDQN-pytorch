@@ -1,0 +1,433 @@
+{
+  "total_episodes": 1,
+  "agent_A_path": "./models/20250819_101958/agent_A/epoch_6.pt",
+  "agent_B_path": "./models/20250819_101958/agent_B/epoch_5.pt",
+  "episodes": [
+    {
+      "episode": 0,
+      "steps": [
+        {
+          "step": 0,
+          "agent_A_smiles": "C",
+          "agent_B_smiles": "C",
+          "agent_A_qed": 0.3597849378839701,
+          "agent_B_qed": 0.3597849378839701,
+          "terminated": false
+        },
+        {
+          "step": 1,
+          "agent_A_smiles": "CO",
+          "agent_B_smiles": "CF",
+          "agent_A_qed": 0.38528440447384316,
+          "agent_B_qed": 0.3673293108901918,
+          "agent_A_action": "CO",
+          "agent_B_action": "CF",
+          "terminated": false
+        },
+        {
+          "step": 2,
+          "agent_A_smiles": "OCF",
+          "agent_B_smiles": "N=CF",
+          "agent_A_qed": 0.4064972094694266,
+          "agent_B_qed": 0.38598598953170743,
+          "agent_A_action": "OCF",
+          "agent_B_action": "N=CF",
+          "terminated": false
+        },
+        {
+          "step": 3,
+          "agent_A_smiles": "OC(F)Cl",
+          "agent_B_smiles": "N=C(F)Cl",
+          "agent_A_qed": 0.42322221354072215,
+          "agent_B_qed": 0.4228564947983762,
+          "agent_A_action": "OC(F)Cl",
+          "agent_B_action": "N=C(F)Cl",
+          "terminated": false
+        },
+        {
+          "step": 4,
+          "agent_A_smiles": "NC(O)(F)Cl",
+          "agent_B_smiles": "NC(F)Cl",
+          "agent_A_qed": 0.25010370683484434,
+          "agent_B_qed": 0.3337434938512106,
+          "agent_A_action": "NC(O)(F)Cl",
+          "agent_B_action": "NC(F)Cl",
+          "terminated": false
+        },
+        {
+          "step": 5,
+          "agent_A_smiles": "OC(F)Cl",
+          "agent_B_smiles": "NC(F)(S)Cl",
+          "agent_A_qed": 0.42322221354072215,
+          "agent_B_qed": 0.2066946672926066,
+          "agent_A_action": "OC(F)Cl",
+          "agent_B_action": "NC(F)(S)Cl",
+          "terminated": false
+        },
+        {
+          "step": 6,
+          "agent_A_smiles": "OC(F)(Cl)Br",
+          "agent_B_smiles": "FC(S)(Cl)NCl",
+          "agent_A_qed": 0.5320198199158456,
+          "agent_B_qed": 0.1894828938908345,
+          "agent_A_action": "OC(F)(Cl)Br",
+          "agent_B_action": "FC(S)(Cl)NCl",
+          "terminated": false
+        },
+        {
+          "step": 7,
+          "agent_A_smiles": "OOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(S)(Cl)NCl",
+          "agent_A_qed": 0.3770031155644402,
+          "agent_B_qed": 0.1894828938908345,
+          "agent_A_action": "OOC(F)(Cl)Br",
+          "agent_B_action": "FC(S)(Cl)NCl",
+          "terminated": false
+        },
+        {
+          "step": 8,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 9,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 10,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 11,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 12,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 13,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 14,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 15,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 16,
+          "agent_A_smiles": "OOOC(F)(Cl)Br",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.413318841200329,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "OOOC(F)(Cl)Br",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 17,
+          "agent_A_smiles": "FC(Cl)(Br)OOOS",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.26242995054884993,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOS",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 18,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 19,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 20,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 21,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 22,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 23,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 24,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 25,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 26,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 27,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 28,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(NCl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.3376753588107848,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(NCl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 29,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "ON(Cl)C(F)(Cl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.2657423264913191,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "ON(Cl)C(F)(Cl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 30,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "ON(Cl)C(F)(Cl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.2657423264913191,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "ON(Cl)C(F)(Cl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 31,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "ON(Cl)C(F)(Cl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.2657423264913191,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "ON(Cl)C(F)(Cl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 32,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "ON(Cl)C(F)(Cl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.2657423264913191,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "ON(Cl)C(F)(Cl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 33,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "ON(Cl)C(F)(Cl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.2657423264913191,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "ON(Cl)C(F)(Cl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 34,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "ON(Cl)C(F)(Cl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.2657423264913191,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "ON(Cl)C(F)(Cl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 35,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "ON(Cl)C(F)(Cl)SBr",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.2657423264913191,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "ON(Cl)C(F)(Cl)SBr",
+          "terminated": false
+        },
+        {
+          "step": 36,
+          "agent_A_smiles": "FC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(SBr)N(Cl)OCl",
+          "agent_A_qed": 0.2622794015754347,
+          "agent_B_qed": 0.25823880988904857,
+          "agent_A_action": "FC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(SBr)N(Cl)OCl",
+          "terminated": false
+        },
+        {
+          "step": 37,
+          "agent_A_smiles": "ClC(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(SBr)N(Cl)OCl",
+          "agent_A_qed": 0.2613092681945365,
+          "agent_B_qed": 0.25823880988904857,
+          "agent_A_action": "ClC(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(SBr)N(Cl)OCl",
+          "terminated": false
+        },
+        {
+          "step": 38,
+          "agent_A_smiles": "NC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(SBr)N(Cl)OCl",
+          "agent_A_qed": 0.1637637073166474,
+          "agent_B_qed": 0.25823880988904857,
+          "agent_A_action": "NC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(SBr)N(Cl)OCl",
+          "terminated": false
+        },
+        {
+          "step": 39,
+          "agent_A_smiles": "ClNC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(SBr)N(Cl)OCl",
+          "agent_A_qed": 0.12204272936371817,
+          "agent_B_qed": 0.25823880988904857,
+          "agent_A_action": "ClNC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(SBr)N(Cl)OCl",
+          "terminated": false
+        },
+        {
+          "step": 40,
+          "agent_A_smiles": "ClNC(Cl)(Br)OOOSBr",
+          "agent_B_smiles": "FC(Cl)(SBr)N(Cl)OCl",
+          "agent_A_qed": 0.12204272936371817,
+          "agent_B_qed": 0.25823880988904857,
+          "agent_A_action": "ClNC(Cl)(Br)OOOSBr",
+          "agent_B_action": "FC(Cl)(SBr)N(Cl)OCl",
+          "terminated": true
+        }
+      ],
+      "final_results": {
+        "agent_A_final_qed": 0.12204272936371817,
+        "agent_B_final_qed": 0.25823880988904857,
+        "agent_A_improvement": -0.2377422085202519,
+        "agent_B_improvement": -0.10154612799492152,
+        "winner": "Agent B",
+        "qed_difference": 0.1361960805253304
+      }
+    }
+  ],
+  "summary": {
+    "agent_A_wins": 0,
+    "agent_B_wins": 1,
+    "draws": 0
+  }
+}
