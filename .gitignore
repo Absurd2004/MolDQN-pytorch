@@ -24,3 +24,4 @@ mol_dqn/display_pl/
 mol_dqn/display_protect_initial/
 
 models/
+display/

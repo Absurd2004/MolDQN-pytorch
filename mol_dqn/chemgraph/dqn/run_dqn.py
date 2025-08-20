@@ -46,6 +46,7 @@ def run_training(hparams, environment, dqn, model_dir,use_wandb=False):
     """
 
     summary_writer = SummaryWriter(model_dir)
+    
 
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -68,6 +69,7 @@ def run_training(hparams, environment, dqn, model_dir,use_wandb=False):
     global_step = 0
 
     best_reward = float('-inf')
+    run_training.best_qed = 0.0
     best_model_path = os.path.join(model_dir, 'best_model.pt')
     eval_frequency = max(1, hparams.eval_frequency)
 
@@ -202,8 +204,26 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
     
         if step == hparams.max_steps_per_episode - 1:
             reward_value = result.reward if isinstance(result.reward, (int, float)) else float(result.reward)
+
+            from rdkit import Chem
+            from rdkit.Chem import QED
+
+            current_qed = 0.0
+            if result.state:
+                mol = Chem.MolFromSmiles(result.state)
+                if mol is not None:
+                    current_qed = QED.qed(mol)
+            
+            if current_qed > run_training.best_qed:
+                old_best = run_training.best_qed
+                run_training.best_qed = current_qed
+                logging.info(f'Single Agent: New best QED! {old_best:.4f} -> {run_training.best_qed:.4f} (Episode {episode})')
+            
             summary_writer.add_scalar('episode/reward', reward_value, global_step)
             summary_writer.add_text('episode/smiles', str(result.state), global_step)
+            # === 新增：记录QED指标 ===
+            summary_writer.add_scalar('episode/qed', current_qed, global_step)
+            summary_writer.add_scalar('episode/best_qed', run_training.best_qed, global_step)
 
             if use_wandb:
                 wandb.log({
@@ -211,8 +231,12 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
                     "episode/smiles": str(result.state),
                     "episode/steps": step + 1,
                     "episode": episode,
-                    "global_step": global_step
+                    "global_step": global_step,
+                    # === 新增：wandb记录QED ===
+                    "episode/qed": current_qed,
+                    "episode/best_qed": run_training.best_qed,
                 })
+
 
 
             logging.info('Episode %d/%d took %gs', episode + 1, hparams.num_episodes,

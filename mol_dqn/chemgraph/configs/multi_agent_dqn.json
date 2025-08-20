@@ -1,5 +1,5 @@
 {
-  "atom_types": ["C", "O", "N","F", "Cl", "Br", "I","S"],
+  "atom_types": ["C", "O", "N"],
   "max_steps_per_episode": 40,
   "allow_removal": true,
   "allow_no_modification": true,
