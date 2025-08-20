@@ -41,8 +41,8 @@ class AdversarialTrainer:
         logging.info(f"Agent A models will be saved to: {self.model_dir_A}")
         logging.info(f"Agent B models will be saved to: {self.model_dir_B}")
 
-        self.best_qed_A = 0.0
-        self.best_qed_B = 0.0
+        #self.best_qed_A = 0.0
+        #self.best_qed_B = 0.0
 
 
 
@@ -294,7 +294,7 @@ class AdversarialTrainer:
 
 
         if use_wandb:
-            # === 修改：添加agent_前缀并使用define_metric ===
+            # === 修改：使用通用的best_reward ===
             wandb.log({
                 f"training/agent_{agent_name}_win_rate": epoch_win_rate,
                 f"training/agent_{agent_name}_wins": epoch_stats['win'],
@@ -302,15 +302,15 @@ class AdversarialTrainer:
                 f"training/agent_{agent_name}_draws": epoch_stats['draw'],
                 f"training/agent_{agent_name}_total": epoch_stats['total'],
                 f"training/agent_{agent_name}_sparse_weight": sparse_weight,
-                f"training/agent_{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,
+                f"training/agent_{agent_name}_best_reward": self.best_reward_A if agent_name == 'A' else self.best_reward_B,
                 f"training/agent_{agent_name}_epoch": epoch,
-                f"agent_{agent_name}_step": current_global_step,  # 添加对应的step
+                f"agent_{agent_name}_step": current_global_step,
             })
 
         logging.info(f'Agent {agent_name} Epoch {epoch}: Win Rate={epoch_win_rate:.3f} '
                 f'({epoch_stats["win"]}/{epoch_stats["total"]}), '
                 f'Wins={epoch_stats["win"]}, Losses={epoch_stats["loss"]}, Draws={epoch_stats["draw"]}, '
-                f'Best QED={self.best_qed_A if agent_name == "A" else self.best_qed_B:.4f}, '
+                f'Best Reward={self.best_reward_A if agent_name == "A" else self.best_reward_B:.4f}, '
                 f'Sparse Weight={sparse_weight:.3f}')
         #self.summary_writer.add_scalar(f'training/{agent_name}_win_rate', epoch_win_rate, epoch)
 
@@ -510,15 +510,15 @@ class AdversarialTrainer:
         final_dense_reward = main_result.reward if main_result else 0.0
 
         if agent_name == 'A':
-            if final_dense_reward > self.best_qed_A:
-                old_best = self.best_qed_A
-                self.best_qed_A = final_dense_reward
-                logging.info(f'Agent A: New best QED! {old_best:.4f} -> {self.best_qed_A:.4f} (Episode {episode})')
+            if final_dense_reward > self.best_reward_A:
+                old_best = self.best_reward_A
+                self.best_reward_A = final_dense_reward
+                logging.info(f'Agent A: New best reward! {old_best:.4f} -> {self.best_reward_A:.4f} (Episode {episode})')
         else:  # agent_name == 'B'
-            if final_dense_reward > self.best_qed_B:
-                old_best = self.best_qed_B
-                self.best_qed_B = final_dense_reward
-                logging.info(f'Agent B: New best QED! {old_best:.4f} -> {self.best_qed_B:.4f} (Episode {episode})')
+            if final_dense_reward > self.best_reward_B:
+                old_best = self.best_reward_B
+                self.best_reward_B = final_dense_reward
+                logging.info(f'Agent B: New best reward! {old_best:.4f} -> {self.best_reward_B:.4f} (Episode {episode})')
 
         final_sparse_reward = sparse_reward if 'sparse_reward' in locals() else 0.0
         final_total_reward = final_dense_reward + final_sparse_reward
@@ -531,26 +531,26 @@ class AdversarialTrainer:
         self.summary_writer.add_scalar(f'episode/agent_{agent_name}_dense_reward', final_dense_reward, global_step)
         self.summary_writer.add_scalar(f'episode/agent_{agent_name}_sparse_reward', final_sparse_reward, global_step)
         self.summary_writer.add_scalar(f'episode/agent_{agent_name}_total_reward', final_total_reward, global_step)
-        self.summary_writer.add_scalar(f'episode/agent_{agent_name}_best_qed', self.best_qed_A if agent_name == 'A' else self.best_qed_B, global_step)
+        self.summary_writer.add_scalar(f'episode/agent_{agent_name}_best_reward', self.best_reward_A if agent_name == 'A' else self.best_reward_B, global_step)
         self.summary_writer.add_text(f'episode/agent_{agent_name}_smiles', str(main_result.state) if main_result else "None", global_step)
 
         if use_wandb:
-            # === 修改：添加agent_前缀并使用define_metric ===
+            # === 修改：wandb记录使用通用名称 ===
             wandb.log({
                 f"episode/agent_{agent_name}_dense_reward": final_dense_reward,
                 f"episode/agent_{agent_name}_sparse_reward": final_sparse_reward,
                 f"episode/agent_{agent_name}_total_reward": final_total_reward,
-                f"episode/agent_{agent_name}_best_qed": self.best_qed_A if agent_name == 'A' else self.best_qed_B,
+                f"episode/agent_{agent_name}_best_reward": self.best_reward_A if agent_name == 'A' else self.best_reward_B,
                 f"episode/agent_{agent_name}_smiles": str(main_result.state) if main_result else "None",
                 f"episode/agent_{agent_name}_steps": step + 1,
                 f"episode/agent_{agent_name}_win_result": win_result if 'win_result' in locals() else "unknown",
                 f"episode/agent_{agent_name}_episode": episode,
-                f"agent_{agent_name}_step": global_step,  # 添加对应的step
+                f"agent_{agent_name}_step": global_step,
             })
 
         logging.info(f'Agent {agent_name} Episode {episode}: DenseReward={final_dense_reward:.4f}, '
                 f'SparseReward={final_sparse_reward:.4f}, TotalReward={final_total_reward:.4f}, '
-                f'BestQED={self.best_qed_A if agent_name == "A" else self.best_qed_B:.4f}, '
+                f'BestReward={self.best_reward_A if agent_name == "A" else self.best_reward_B:.4f}, '
                 f'Steps={step+1}, Time={episode_time:.2f}s, Result={win_result if "win_result" in locals() else "unknown"}')
         
         
@@ -561,26 +561,24 @@ class AdversarialTrainer:
         from rdkit import Chem
         from rdkit.Chem import QED
         
-        # 获取QED分数
-        if main_result and main_result.state:
-            main_mol = Chem.MolFromSmiles(main_result.state)
-            main_qed = QED.qed(main_mol) if main_mol else 0.0
+        # === 修改：直接使用reward进行比较，不再硬编码QED ===
+        if main_result and main_result.reward is not None:
+            main_reward = main_result.reward
         else:
-            main_qed = 0.0
+            main_reward = 0.0
             
-        if opp_result and opp_result.state:
-            opp_mol = Chem.MolFromSmiles(opp_result.state)
-            opp_qed = QED.qed(opp_mol) if opp_mol else 0.0
+        if opp_result and opp_result.reward is not None:
+            opp_reward = opp_result.reward
         else:
-            opp_qed = 0.0
+            opp_reward = 0.0
         
         #print(f"Agent {agent_name} Final QED - Main: {main_qed:.4f}, Opponent: {opp_qed:.4f}")
 
         # 计算胜负（使用小的容差避免浮点误差）
-        tolerance = 1e-6
-        if abs(main_qed - opp_qed) < tolerance:
+        tolerance = 1e-3
+        if abs(main_reward - opp_reward) < tolerance:
             result = "draw"
-        elif main_qed > opp_qed:
+        elif main_reward > opp_reward:
             result = "win"
         else:
             result = "loss"
@@ -620,18 +618,32 @@ class AdversarialTrainer:
             weight=weight_tensor
         )
 
-        self.summary_writer.add_scalar(f'training/{agent_name}_loss', loss, global_step)
+        current_lr = agent.optimizer.param_groups[0]['lr']
+        current_epsilon = getattr(agent, 'epsilon', 0.0)  # 有些agent可能没有epsilon属性
+
+        current_epoch = self.epoch
+        exploration_epsilon = self.exploration.value(current_epoch)
+
+        self.summary_writer.add_scalar(f'training/agent_{agent_name}_loss', loss, global_step)
+        # === 新增：记录学习率和epsilon ===
+        self.summary_writer.add_scalar(f'training/agent_{agent_name}_learning_rate', current_lr, global_step)
+        self.summary_writer.add_scalar(f'training/agent_{agent_name}_epsilon', current_epsilon, global_step)
+        self.summary_writer.add_scalar(f'training/agent_{agent_name}_exploration_epsilon', exploration_epsilon, global_step)
 
         if use_wandb:
-            # === 修改：添加agent_前缀并使用define_metric ===
+            # === 修改：添加学习率和epsilon记录 ===
             wandb.log({
                 f"training/agent_{agent_name}_loss": loss,
                 f"training/agent_{agent_name}_td_error_mean": td_error.mean().item(),
                 f"training/agent_{agent_name}_episode": episode,
-                f"agent_{agent_name}_step": global_step,  # 添加对应的step
+                f"training/agent_{agent_name}_learning_rate": current_lr,  # 新增
+                f"training/agent_{agent_name}_epsilon": current_epsilon,  # 新增
+                f"training/agent_{agent_name}_exploration_epsilon": exploration_epsilon,  # 新增
+                f"agent_{agent_name}_step": global_step,
             })
         
-        logging.info(f'Agent {agent_name} Training: Loss={loss:.4f}, TD_Error={td_error.mean().item():.4f}')
+        logging.info(f'Agent {agent_name} Training: Loss={loss:.4f}, TD_Error={td_error.mean().item():.4f}, '
+                    f'LR={current_lr:.6f}, Epsilon={current_epsilon:.4f}, Exploration={exploration_epsilon:.4f}')
 
 
         if self.hparams.prioritized and indices is not None:
@@ -743,31 +755,22 @@ class AdversarialTrainer:
                 if step_result['terminated']:
                     break
             
-            # === 计算本局胜负 ===
-            qed_A = 0.0
-            qed_B = 0.0
+            # === 修改：使用通用reward进行比较 ===
+            reward_A = final_main_result.reward if final_main_result and final_main_result.reward is not None else 0.0
+            reward_B = final_opp_result.reward if final_opp_result and final_opp_result.reward is not None else 0.0
 
-            if final_main_result and final_main_result.state:
-                mol_A = Chem.MolFromSmiles(final_main_result.state)
-                qed_A = QED.qed(mol_A) if mol_A else 0.0
-                
-            if final_opp_result and final_opp_result.state:
-                mol_B = Chem.MolFromSmiles(final_opp_result.state)
-                qed_B = QED.qed(mol_B) if mol_B else 0.0
-            
-
-            tolerance = 1e-4
-            if abs(qed_A - qed_B) < tolerance:
+            tolerance = 1e-3
+            if abs(reward_A - reward_B) < tolerance:
                 draws += 1
                 result_str = "draw"
-            elif qed_A > qed_B:
+            elif reward_A > reward_B:
                 wins_A += 1
                 result_str = "A wins"
             else:
                 wins_B += 1
                 result_str = "B wins"
             
-            logging.info(f'Eval Episode {eval_ep+1}: A_QED={qed_A:.4f}, B_QED={qed_B:.4f}, Result={result_str}')
+            logging.info(f'Eval Episode {eval_ep+1}: A_Reward={reward_A:.4f}, B_Reward={reward_B:.4f}, Result={result_str}')
         
 
         self.agent_A.train()

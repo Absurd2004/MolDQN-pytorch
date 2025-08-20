@@ -15,6 +15,7 @@ from mol_dqn.chemgraph.dqn.params import core
 from mol_dqn.chemgraph.dqn.agent import DoubleDQNAgent
 from mol_dqn.utils.hparams import get_hparams
 import os
+from datetime import datetime
 
 class QEDRewardMolecule(molecules_mdp.Molecule):
     """The molecule whose reward is the QED."""
@@ -50,16 +51,16 @@ class QEDRewardMolecule(molecules_mdp.Molecule):
 
 def main():
     parser = argparse.ArgumentParser(description='Optimize QED of a molecule with DQN')
-    parser.add_argument('--hparams', type=str, default=None,
+    parser.add_argument('--hparams', type=str, default="./mol_dqn/chemgraph/configs/naive_dqn.json",
                      help='Path to hyperparameters JSON file')
     parser.add_argument('--start_molecule', type=str, default=None,
                      help='Starting molecule SMILES string')
-    parser.add_argument('--model_dir', type=str, required=True,
+    parser.add_argument('--model_dir', type=str, default="./models/one-agent",
                      help='Directory to save model and logs')
 
     parser.add_argument('--wandb_project', type=str, default='mol-dqn',
                      help='Weights & Biases project name')
-    parser.add_argument('--wandb_run_name', type=str, default=None,
+    parser.add_argument('--wandb_run_name', type=str, default="one agent baseline",
                      help='Weights & Biases run name')
     parser.add_argument('--use_wandb', type=bool, default=False,
                      help='Disable Weights & Biases logging')
@@ -67,6 +68,18 @@ def main():
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+    logging.basicConfig(level=logging.INFO)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamped_model_dir = os.path.join(args.model_dir, timestamp)
+    
+    # 创建模型目录
+    os.makedirs(timestamped_model_dir, exist_ok=True)
+
+    logging.basicConfig(level=logging.INFO)
+    logging.info(f"Model directory: {timestamped_model_dir}")
 
 
     if args.use_wandb:

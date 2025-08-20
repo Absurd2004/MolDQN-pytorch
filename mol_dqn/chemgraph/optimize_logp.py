@@ -51,16 +51,16 @@ class LogPRewardMolecule(molecules_mdp.Molecule):
 
 def main():
     parser = argparse.ArgumentParser(description='Optimize QED of a molecule with DQN')
-    parser.add_argument('--hparams', type=str, default=None,
+    parser.add_argument('--hparams', type=str, default="./mol_dqn/chemgraph/configs/naive_dqn.json",
                      help='Path to hyperparameters JSON file')
     parser.add_argument('--start_molecule', type=str, default=None,
                      help='Starting molecule SMILES string')
-    parser.add_argument('--model_dir', type=str, required=True,
+    parser.add_argument('--model_dir', type=str, default="./models/one-agent-logP",
                      help='Directory to save model and logs')
 
     parser.add_argument('--wandb_project', type=str, default='mol-dqn',
                      help='Weights & Biases project name')
-    parser.add_argument('--wandb_run_name', type=str, default=None,
+    parser.add_argument('--wandb_run_name', type=str, default="one-agent-logP baseline",
                      help='Weights & Biases run name')
     parser.add_argument('--use_wandb', type=bool, default=False,
                      help='Disable Weights & Biases logging')

@@ -6,14 +6,14 @@ from mol_dqn.utils.hparams import get_hparams
 from datetime import datetime
 from mol_dqn.chemgraph.dqn.agent import DoubleDQNAgent
 from mol_dqn.chemgraph.runner.multi_agent_runner import AdversarialTrainer
-from mol_dqn.chemgraph.optimize_qed import QEDRewardMolecule
+from mol_dqn.chemgraph.optimize_logp import LogPRewardMolecule
 
 def main():
     parser = argparse.ArgumentParser(description='Adversarial Molecular DQN Training')
-    parser.add_argument('--config', type=str, default="./mol_dqn/chemgraph/configs/multi_agent_dqn_qed.json",help='Path to JSON config file')
+    parser.add_argument('--config', type=str, default="./mol_dqn/chemgraph/configs/multi_agent_dqn_plogp.json",help='Path to JSON config file')
     parser.add_argument('--start_molecule', type=str, default=None,
                      help='Starting molecule SMILES string')
-    parser.add_argument('--model_dir', type=str, default="./models/qed", help='Directory to save models')
+    parser.add_argument('--model_dir', type=str, default="./models/plogp", help='Directory to save models')
     parser.add_argument('--use_wandb', action='store_true', help='Use Weights & Biases logging')
     parser.add_argument('--wandb_project', type=str, default='mol-dqn-compete',
                      help='Weights & Biases project name')
@@ -35,7 +35,7 @@ def main():
     logging.info(f"Model directory: {timestamped_model_dir}")
 
     if args.use_wandb:
-        run_name = args.wandb_run_name if args.wandb_run_name else f"compete-molecule-qed-{timestamp}"
+        run_name = args.wandb_run_name if args.wandb_run_name else f"compete-molecule-plogP{timestamp}"
         wandb.init(
             project=args.wandb_project,
             name=run_name,
@@ -74,7 +74,7 @@ def main():
     # 创建训练器
     trainer = AdversarialTrainer(
         hparams=hparams,
-        env_class=QEDRewardMolecule,
+        env_class=LogPRewardMolecule,
         env_kwargs=env_kwargs,
         agent_A=agent_A,
         agent_B=agent_B,
