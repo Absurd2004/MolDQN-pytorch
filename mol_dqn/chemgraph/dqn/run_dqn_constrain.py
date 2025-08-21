@@ -92,6 +92,7 @@ def run_training(hparams, environment, dqn, model_dir,use_wandb=False):
             model_dir=model_dir,
             save_video = False,
             use_wandb=use_wandb)
+        #assert False,"check whole _episode function"
         
         if (episode + 1) % hparams.update_frequency == 0:
             dqn.update_target_network() 
@@ -160,9 +161,31 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
     """
     
     episode_start_time = time.time()
-    environment.initialize()
+    environment.initialize(episode=episode, total_episodes=hparams.num_episodes)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    if hasattr(environment, 'resource_manager') and environment.resource_manager:
+        limits_info = environment.resource_manager.get_current_limits_info()
+        if episode % 10 == 0:  # 每100个episode记录一次
+            logging.info(f'Episode {episode} Resource Limits: {limits_info}')
+        
+        # 记录到TensorBoard
+        for atom, limit in limits_info['current_atom_limits'].items():
+            summary_writer.add_scalar(f'curriculum/atom_{atom}_limit', limit, episode)
+        for op, limit in limits_info['current_operation_limits'].items():
+            summary_writer.add_scalar(f'curriculum/operation_{op}_limit', limit, episode)
+            
+        if use_wandb:
+            wandb_log_dict = {}
+            for atom, limit in limits_info['current_atom_limits'].items():
+                wandb_log_dict[f'curriculum/atom_{atom}_limit'] = limit
+            for op, limit in limits_info['current_operation_limits'].items():
+                wandb_log_dict[f'curriculum/operation_{op}_limit'] = limit
+            wandb_log_dict['episode'] = episode
+            wandb.log(wandb_log_dict)
+    #print(f"limits_info: {limits_info}")
+    
 
     if save_video:
         if environment._state:
@@ -201,12 +224,10 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
         #print(f"Episode {episode}, Step {step}: {result.state}, Reward: {result.reward:.4f}")
         
         #assert False,"检查点"
+        #assert False,"check whole _step function"
     
         if step == hparams.max_steps_per_episode - 1:
             reward_value = result.reward if isinstance(result.reward, (int, float)) else float(result.reward)
-            #reward_value = result.reward
-
-
 
             final_reward = reward_value
 
@@ -232,10 +253,6 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
                     "episode/best_final_reward": run_training.best_final_reward,
 
                 })
-            #print(f"reward_value: {reward_value:.4f}")
-            #print(f"final_reward: {final_reward:.4f}")
-            #assert reward_value == final_reward, "reward_value should equal final_reward"
-            
 
 
 
@@ -302,7 +319,7 @@ def _episode(environment, dqn, memory, episode, global_step, hparams,
             
 
             summary_writer.add_scalar('training/loss', loss, global_step)
-            logging.info('Current Loss: %.4f', loss)
+            logging.info(f'Training step {global_step}, Loss: {loss:.4f}, TD Error: {td_error.mean().item():.4f}')
 
             #print(f"Episode {episode}, Step {step}: Loss: {loss:.4f}, TD Error: {td_error.mean().item():.4f}")
             #print(f"完成一次更新")
@@ -343,17 +360,38 @@ def _step(environment, dqn, memory, episode, hparams, exploration, head, model_d
     valid_actions = list(environment.get_valid_actions()) #此时是在上一个state下可能的所有valid_actions
 
 
-    observations = np.vstack([
-        np.append(get_fingerprint(act, hparams), steps_left)
-        for act in valid_actions
-    ])
+    if hasattr(environment, 'use_resource_limits') and environment.use_resource_limits:
+        # 获取资源状态向量
+        resource_vector = environment.get_resource_observation()
+        #print(f"Resource vector: {resource_vector}")
+        
+        observations = np.vstack([
+            np.append(np.append(get_fingerprint(act, hparams), steps_left), resource_vector)
+            for act in valid_actions
+        ])
+        #print(f"Observations shape with resource limits: {observations.shape}")
+    else:
+        # 原来的逻辑
+        observations = np.vstack([
+            np.append(get_fingerprint(act, hparams), steps_left)
+            for act in valid_actions
+        ])
+    #assert False,"check observations shape"
 
 
     action = valid_actions[dqn.get_action(
         observations, head=head, update_epsilon=exploration.value(episode))] #在当前步里DQN产生的action，也是next_state,最终计算当前Q(s,a)的时候用的就是这个action
+    #print(f"Selected action: {action}")
+
+    if hasattr(environment, 'use_resource_limits') and environment.use_resource_limits:
+        resource_vector = environment.get_resource_observation()
+        action_t_fingerprint = np.append(
+            np.append(get_fingerprint(action, hparams), steps_left), resource_vector)
+    else:
+        action_t_fingerprint = np.append(
+            get_fingerprint(action, hparams), steps_left)
+    #print(f"Action fingerprint shape: {action_t_fingerprint.shape}")
     
-    action_t_fingerprint = np.append(
-        get_fingerprint(action, hparams), steps_left) #current_state 
     
     result = environment.step(action) #在这一步之后环境里的state就更改了，变成action__fingerprints，这里的reward是已经变成action_fingerprint之后的reward
 
@@ -373,13 +411,28 @@ def _step(environment, dqn, memory, episode, hparams, exploration, head, model_d
         except Exception as e:
             print(f"Error saving molecule image: {e}")
     
+
+    
     steps_left = hparams.max_steps_per_episode - environment.num_steps_taken
 
+    if hasattr(environment, 'use_resource_limits') and environment.use_resource_limits:
+        resource_vector = environment.get_resource_observation()
+        action_fingerprints = np.vstack([
+            np.append(np.append(get_fingerprint(act, hparams), steps_left), resource_vector)
+            for act in environment.get_valid_actions()
+        ])
+    else:
+        action_fingerprints = np.vstack([
+            np.append(get_fingerprint(act, hparams), steps_left)
+            for act in environment.get_valid_actions()
+        ])
+    #print(f"Action fingerprints shape: {action_fingerprints.shape}")
 
-    action_fingerprints = np.vstack([
-      np.append(get_fingerprint(act, hparams), steps_left)
-      for act in environment.get_valid_actions()
-    ]) #这里的actions是在当前action_t_fingerprins下的所有可能动作，其实也就是Q更新的时候的s‘下所有可能的action
+
+    #action_fingerprints = np.vstack([
+      #np.append(get_fingerprint(act, hparams), steps_left)
+      #for act in environment.get_valid_actions()
+    #]) #这里的actions是在当前action_t_fingerprins下的所有可能动作，其实也就是Q更新的时候的s‘下所有可能的action
 
     memory.add(
       obs_t=action_t_fingerprint,
@@ -421,10 +474,17 @@ def _evaluate_model(environment, dqn, hparams, num_eval_episodes=3):
                 break
             steps_left = hparams.max_steps_per_episode - environment.num_steps_taken
 
-            observations = np.vstack([
-                np.append(get_fingerprint(act, hparams), steps_left)
-                for act in valid_actions
-            ])
+            if hasattr(environment, 'use_resource_limits') and environment.use_resource_limits:
+                resource_vector = environment.get_resource_observation()
+                observations = np.vstack([
+                    np.append(np.append(get_fingerprint(act, hparams), steps_left), resource_vector)
+                    for act in valid_actions
+                ])
+            else:
+                observations = np.vstack([
+                    np.append(get_fingerprint(act, hparams), steps_left)
+                    for act in valid_actions
+                ])
 
             head = 0 if not hparams.num_bootstrap_heads else np.random.randint(hparams.num_bootstrap_heads)
             action_idx = dqn.get_action(observations, head=head, stochastic=False)
